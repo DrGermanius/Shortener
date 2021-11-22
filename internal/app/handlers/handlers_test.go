@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/DrGermanius/Shortener/internal/app"
+	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
@@ -18,7 +19,7 @@ const (
 	yandexLink = "https://yandex.ru"
 )
 
-func TestHandler(t *testing.T) {
+func TestPostHandler(t *testing.T) {
 	tests := []struct {
 		name      string
 		method    string
@@ -36,7 +37,54 @@ func TestHandler(t *testing.T) {
 			},
 		},
 		{
-			name:      "positive test #2",
+			name:   "negative test #2",
+			method: http.MethodPost,
+			link:   "",
+			want: want{
+				code: http.StatusBadRequest,
+				err:  app.ErrEmptyBodyPostReq,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			request := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.link))
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(AddShortLinkHandler)
+			h.ServeHTTP(w, request)
+			res := w.Result()
+
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bodyStr := string(body)
+
+			if tt.want.err == nil {
+				require.Equal(t, tt.want.code, res.StatusCode)
+				require.Equal(t, tt.want.response, bodyStr)
+			} else {
+				require.Equal(t, tt.want.code, res.StatusCode)
+				require.Error(t, tt.want.err)
+			}
+		})
+	}
+}
+
+func TestGetHandler(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:      "positive test #3",
 			method:    http.MethodGet,
 			link:      gitLink,
 			shortLink: app.ShortLink([]byte(gitLink)),
@@ -45,27 +93,7 @@ func TestHandler(t *testing.T) {
 			},
 		},
 		{
-			name:      "negative test #3",
-			method:    http.MethodPut,
-			link:      gitLink,
-			shortLink: app.ShortLink([]byte(gitLink)),
-			want: want{
-				code: http.StatusBadRequest,
-				err:  app.ErrMethodNotAllowed,
-			},
-		},
-		{
 			name:      "negative test #4",
-			method:    http.MethodDelete,
-			link:      gitLink,
-			shortLink: app.ShortLink([]byte(gitLink)),
-			want: want{
-				code: http.StatusBadRequest,
-				err:  app.ErrMethodNotAllowed,
-			},
-		},
-		{
-			name:      "negative test #5",
 			method:    http.MethodGet,
 			link:      yandexLink,
 			shortLink: app.ShortLink([]byte(yandexLink)),
@@ -79,34 +107,16 @@ func TestHandler(t *testing.T) {
 		initTestData()
 
 		t.Run(tt.name, func(t *testing.T) {
-			var request *http.Request
-			if tt.method == http.MethodGet {
-				request = httptest.NewRequest(tt.method, "/"+tt.shortLink, nil)
-			} else {
-				request = httptest.NewRequest(tt.method, "/", strings.NewReader(tt.link))
-			}
+			request := httptest.NewRequest(tt.method, "/"+tt.shortLink, nil)
 
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(ShortenerHandler)
+			h := http.HandlerFunc(GetShortLinkHandler)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
-			defer res.Body.Close()
-			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
-			bodyStr := string(body)
-
 			if tt.want.err == nil {
-				if request.Method == http.MethodGet {
-					require.Equal(t, tt.want.code, res.StatusCode)
-					require.Equal(t, res.Header.Get("Location"), tt.link)
-				}
-				if request.Method == http.MethodPost {
-					require.Equal(t, tt.want.code, res.StatusCode)
-					require.Equal(t, tt.want.response, bodyStr)
-				}
+				require.Equal(t, tt.want.code, res.StatusCode)
+				require.Equal(t, res.Header.Get("Location"), tt.link)
 			} else {
 				require.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
@@ -116,7 +126,9 @@ func TestHandler(t *testing.T) {
 }
 
 func initTestData() {
-	store.InitLinksMap()
+	config.NewConfig()
+
+	store.NewLinksMap()
 
 	gitShortLink := app.ShortLink([]byte(gitLink))
 	store.LinksMap[gitShortLink] = gitLink

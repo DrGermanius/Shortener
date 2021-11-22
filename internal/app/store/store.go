@@ -2,6 +2,6 @@ package store
 
 var LinksMap map[string]string
 
-func InitLinksMap() {
+func NewLinksMap() {
 	LinksMap = make(map[string]string)
 }

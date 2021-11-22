@@ -1,21 +1,35 @@
 package main
 
 import (
+	"github.com/DrGermanius/Shortener/internal/app"
 	"log"
+	"net/http"
+	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
 func main() {
-	store.InitLinksMap()
+	c := config.NewConfig()
+	p := strconv.Itoa(c.Port())
 
-	r := gin.Default()
+	store.NewLinksMap()
 
-	r.Any("/*path", gin.WrapF(handlers.ShortenerHandler))
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 
-	log.Println("API started on " + handlers.Port)
-	log.Fatalln(r.Run(":" + handlers.Port))
+	r.Get("/{id}", handlers.GetShortLinkHandler)
+	r.Post("/", handlers.AddShortLinkHandler)
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, app.ErrMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
+	})
+
+	log.Println("API started on " + p)
+	log.Fatalln(http.ListenAndServe(":"+p, r))
 }
