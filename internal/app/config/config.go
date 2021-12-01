@@ -1,11 +1,18 @@
 package config
 
-import "strconv"
+import (
+	"log"
+	"os"
+	"strconv"
+)
 
 var c *config
 
 const (
-	apiPort = 8080
+	baseUrl       = "BASE_URL"
+	serverAddress = "SERVER_ADDRESS"
+
+	apiPort = "8080"
 	host    = "http://localhost"
 )
 
@@ -17,8 +24,22 @@ type config struct {
 func NewConfig() *config {
 	c = new(config)
 
-	c.Port = apiPort
-	c.Host = host
+	b, e := os.LookupEnv(baseUrl)
+	if !e {
+		b = host
+	}
+	c.Host = b
+
+	s, e := os.LookupEnv(serverAddress)
+	if !e {
+		s = apiPort
+	}
+	port, err := strconv.Atoi(s)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	c.Port = port
 	return c
 }
 
