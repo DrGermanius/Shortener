@@ -10,15 +10,15 @@ const (
 )
 
 type config struct {
-	port int
-	host string
+	Port int
+	Host string
 }
 
 func NewConfig() *config {
 	c = new(config)
 
-	c.port = apiPort
-	c.host = host
+	c.Port = apiPort
+	c.Host = host
 	return c
 }
 
@@ -26,14 +26,6 @@ func Config() *config {
 	return c
 }
 
-func (c *config) Port() int {
-	return c.port
-}
-
-func (c *config) Host() string {
-	return c.host
-}
-
 func (c *config) Full() string {
-	return c.host + ":" + strconv.Itoa(c.port)
+	return c.Host + ":" + strconv.Itoa(c.Port)
 }

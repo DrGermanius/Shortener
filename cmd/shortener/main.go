@@ -16,7 +16,7 @@ import (
 
 func main() {
 	c := config.NewConfig()
-	p := strconv.Itoa(c.Port())
+	p := strconv.Itoa(c.Port)
 
 	store.NewLinksMap()
 

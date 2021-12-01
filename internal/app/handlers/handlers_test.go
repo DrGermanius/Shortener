@@ -64,13 +64,15 @@ func TestPostHandler(t *testing.T) {
 			}
 			bodyStr := string(body)
 
-			if tt.want.err == nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
-				require.Equal(t, tt.want.response, bodyStr)
-			} else {
+			if tt.want.err != nil {
 				require.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
+				return
 			}
+
+			require.Equal(t, tt.want.code, res.StatusCode)
+			require.Equal(t, tt.want.response, bodyStr)
+
 		})
 	}
 }
@@ -114,13 +116,15 @@ func TestGetHandler(t *testing.T) {
 			h.ServeHTTP(w, request)
 			res := w.Result()
 
-			if tt.want.err == nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
-				require.Equal(t, res.Header.Get("Location"), tt.link)
-			} else {
+			if tt.want.err != nil {
 				require.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
+				return
 			}
+
+			require.Equal(t, tt.want.code, res.StatusCode)
+			require.Equal(t, res.Header.Get("Location"), tt.link)
+
 		})
 	}
 }
