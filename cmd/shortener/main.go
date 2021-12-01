@@ -25,6 +25,7 @@ func main() {
 
 	r.Get("/{id}", handlers.GetShortLinkHandler)
 	r.Post("/", handlers.AddShortLinkHandler)
+	r.Post("/api/shorten", handlers.ShortenHandler)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, app.ErrMethodNotAllowed.Error(), http.StatusMethodNotAllowed)

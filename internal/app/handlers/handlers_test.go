@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -115,6 +117,7 @@ func TestGetHandler(t *testing.T) {
 			h := http.HandlerFunc(GetShortLinkHandler)
 			h.ServeHTTP(w, request)
 			res := w.Result()
+			defer res.Body.Close()
 
 			if tt.want.err != nil {
 				require.Equal(t, tt.want.code, res.StatusCode)
@@ -124,6 +127,73 @@ func TestGetHandler(t *testing.T) {
 
 			require.Equal(t, tt.want.code, res.StatusCode)
 			require.Equal(t, res.Header.Get("Location"), tt.link)
+
+		})
+	}
+}
+
+func TestShortenHandler(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:      "positive test #5",
+			method:    http.MethodPost,
+			link:      gitLink,
+			shortLink: "http://localhost:8080/" + app.ShortLink([]byte(gitLink)),
+			want: want{
+				code: http.StatusCreated,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+
+		sReq := struct {
+			URL string `json:"url"`
+		}{
+			URL: tt.link,
+		}
+
+		sRes := struct {
+			Result string `json:"result"`
+		}{}
+
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(sReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(tt.method, "/api/shorten", bytes.NewBuffer(body))
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(ShortenHandler)
+			h.ServeHTTP(w, request)
+			res := w.Result()
+
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = json.Unmarshal(resBody, &sRes)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.want.err != nil {
+				require.Equal(t, tt.want.code, res.StatusCode)
+				require.Error(t, tt.want.err)
+				return
+			}
+
+			require.Equal(t, sRes.Result, tt.shortLink)
+			require.Equal(t, res.Header.Get("Content-Type"), "application/json")
 
 		})
 	}

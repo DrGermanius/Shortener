@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -47,6 +48,44 @@ func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(full))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+func ShortenHandler(w http.ResponseWriter, req *http.Request) {
+	b, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	defer req.Body.Close()
+
+	sReq := struct {
+		URL string `json:"url"`
+	}{}
+
+	sRes := struct {
+		Result string `json:"result"`
+	}{}
+
+	err = json.Unmarshal(b, &sReq)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s := app.ShortLink([]byte(sReq.URL))
+	store.LinksMap[s] = sReq.URL
+
+	sRes.Result = config.Config().Full() + "/" + s
+	jRes, _ := json.Marshal(sRes)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	_, err = w.Write(jRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
