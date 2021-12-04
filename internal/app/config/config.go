@@ -11,7 +11,7 @@ const (
 	serverAddress = "SERVER_ADDRESS"
 
 	defaultServerAddress = "localhost:8080"
-	defaultBaseUrl       = "http://localhost:8080/"
+	defaultBaseURL       = "http://localhost:8080/"
 )
 
 type config struct {
@@ -30,7 +30,7 @@ func NewConfig() *config {
 
 	s, e := os.LookupEnv(baseURL)
 	if !e {
-		s = defaultBaseUrl
+		s = defaultBaseURL
 	}
 
 	c.BaseUrl = s
