@@ -9,7 +9,7 @@ import (
 var c *config
 
 const (
-	baseUrl       = "BASE_URL"
+	baseURL       = "BASE_URL"
 	serverAddress = "SERVER_ADDRESS"
 
 	apiPort = "36595"
@@ -24,7 +24,7 @@ type config struct {
 func NewConfig() *config {
 	c = new(config)
 
-	b, e := os.LookupEnv(baseUrl)
+	b, e := os.LookupEnv(baseURL)
 	if !e {
 		b = host
 	}
