@@ -12,7 +12,7 @@ const (
 	baseUrl       = "BASE_URL"
 	serverAddress = "SERVER_ADDRESS"
 
-	apiPort = "8080"
+	apiPort = "36595"
 	host    = "http://localhost"
 )
 
