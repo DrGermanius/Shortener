@@ -2,12 +2,10 @@ package main
 
 import (
 	"github.com/DrGermanius/Shortener/internal/app"
-	"log"
-	"net/http"
-	"strconv"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"log"
+	"net/http"
 
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
@@ -16,7 +14,6 @@ import (
 
 func main() {
 	c := config.NewConfig()
-	p := strconv.Itoa(c.Port)
 
 	store.NewLinksMap()
 
@@ -31,6 +28,6 @@ func main() {
 		http.Error(w, app.ErrMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
 	})
 
-	log.Println("API started on " + p)
-	log.Fatalln(http.ListenAndServe(":"+p, r))
+	log.Println("API started on " + c.ServerAddress)
+	log.Fatalln(http.ListenAndServe(c.ServerAddress, r))
 }

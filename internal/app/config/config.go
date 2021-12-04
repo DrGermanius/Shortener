@@ -1,9 +1,7 @@
 package config
 
 import (
-	"log"
 	"os"
-	"strconv"
 )
 
 var c *config
@@ -12,41 +10,33 @@ const (
 	baseURL       = "BASE_URL"
 	serverAddress = "SERVER_ADDRESS"
 
-	apiPort = "36595"
-	host    = "http://localhost"
+	defaultServerAddress = "localhost:8080"
+	defaultBaseUrl       = "http://localhost:8080/"
 )
 
 type config struct {
-	Port int
-	Host string
+	BaseUrl       string
+	ServerAddress string
 }
 
 func NewConfig() *config {
 	c = new(config)
 
-	b, e := os.LookupEnv(baseURL)
+	b, e := os.LookupEnv(serverAddress)
 	if !e {
-		b = host
+		b = defaultServerAddress
 	}
-	c.Host = b
+	c.ServerAddress = b
 
-	s, e := os.LookupEnv(serverAddress)
+	s, e := os.LookupEnv(baseURL)
 	if !e {
-		s = apiPort
-	}
-	port, err := strconv.Atoi(s)
-	if err != nil {
-		log.Fatalln(err)
+		s = defaultBaseUrl
 	}
 
-	c.Port = port
+	c.BaseUrl = s
 	return c
 }
 
 func Config() *config {
 	return c
-}
-
-func (c *config) Full() string {
-	return c.Host + ":" + strconv.Itoa(c.Port)
 }
