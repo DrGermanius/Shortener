@@ -15,7 +15,7 @@ const (
 )
 
 type config struct {
-	BaseUrl       string
+	BaseURL       string
 	ServerAddress string
 }
 
@@ -33,7 +33,7 @@ func NewConfig() *config {
 		s = defaultBaseURL
 	}
 
-	c.BaseUrl = s
+	c.BaseURL = s
 	return c
 }
 
