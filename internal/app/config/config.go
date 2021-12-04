@@ -11,7 +11,7 @@ const (
 	serverAddress = "SERVER_ADDRESS"
 
 	defaultServerAddress = "localhost:8080"
-	defaultBaseURL       = "http://localhost:8080/"
+	defaultBaseURL       = "http://localhost:8080"
 )
 
 type config struct {
