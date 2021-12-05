@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"os"
 )
 
@@ -25,23 +26,53 @@ type config struct {
 func NewConfig() *config {
 	c = new(config)
 
-	b, e := os.LookupEnv(serverAddress)
+	a, e := os.LookupEnv(serverAddress)
 	if !e {
-		b = defaultServerAddress
+		a = defaultServerAddress
 	}
-	c.ServerAddress = b
+	flag.StringVar(&a, "h", a, "host to listen on")
 
-	s, e := os.LookupEnv(baseURL)
+	b, e := os.LookupEnv(baseURL)
 	if !e {
-		s = defaultBaseURL
+		b = defaultBaseURL
 	}
-	c.BaseURL = s
+	flag.StringVar(&b, "b", b, "baseURl for short link")
 
-	p, e := os.LookupEnv(filePathEnv)
+	f, e := os.LookupEnv(filePathEnv)
 	if !e {
-		p = defaultFilePath
+		f = defaultFilePath
 	}
-	c.FilePath = p
+	flag.StringVar(&f, "f", f, "filePath for links")
+	flag.Parse()
+
+	c.ServerAddress = a
+	c.BaseURL = b
+	c.FilePath = f
+
+	return c
+}
+
+func Suite() *config { //todo rewrite after lesson about TestSuite
+	c = new(config)
+
+	a, e := os.LookupEnv(serverAddress)
+	if !e {
+		a = defaultServerAddress
+	}
+
+	b, e := os.LookupEnv(baseURL)
+	if !e {
+		b = defaultBaseURL
+	}
+
+	f, e := os.LookupEnv(filePathEnv)
+	if !e {
+		f = defaultFilePath
+	}
+
+	c.ServerAddress = a
+	c.BaseURL = b
+	c.FilePath = f
 
 	return c
 }

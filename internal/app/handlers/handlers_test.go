@@ -201,7 +201,7 @@ func TestShortenHandler(t *testing.T) {
 }
 
 func initTestData() {
-	config.NewConfig()
+	config.Suite()
 
 	err := store.NewLinksMap()
 	if err != nil {
