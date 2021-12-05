@@ -6,11 +6,7 @@ import (
 	"os"
 
 	"github.com/DrGermanius/Shortener/internal/app"
-)
-
-const (
-	filePathEnv     = "FILE_STORAGE_PATH"
-	defaultFilePath = "./tmp"
+	"github.com/DrGermanius/Shortener/internal/app/config"
 )
 
 type Links map[string]string
@@ -27,7 +23,7 @@ func NewLinksMap() error {
 }
 
 func Clear() error {
-	f := getFilePath()
+	f := config.Config().FilePath
 	err := os.Remove(f)
 	if err != nil {
 		return err
@@ -48,7 +44,7 @@ func (l *Links) Write(long string) (string, error) {
 }
 
 func (l *Links) readFile() error {
-	p := getFilePath()
+	p := config.Config().FilePath
 
 	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
@@ -75,7 +71,7 @@ func writeFile(short, long string) error {
 		Long:  long,
 	}
 
-	p := getFilePath()
+	p := config.Config().FilePath
 
 	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
@@ -102,14 +98,6 @@ func writeFile(short, long string) error {
 		return err
 	}
 	return nil
-}
-
-func getFilePath() string {
-	p, e := os.LookupEnv(filePathEnv)
-	if !e {
-		return defaultFilePath
-	}
-	return p
 }
 
 type link struct {
