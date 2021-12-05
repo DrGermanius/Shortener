@@ -84,6 +84,10 @@ func writeFile(short, long string) error {
 	defer f.Close()
 
 	data, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
 	data = append(data, '\n')
 
 	w := bufio.NewWriter(f)
