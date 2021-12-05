@@ -41,8 +41,11 @@ func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s := app.ShortLink(b)
-	store.LinksMap[s] = string(b)
+	s, err := store.LinksMap.Write(string(b))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	full := config.Config().BaseURL + "/" + s
 
@@ -76,8 +79,11 @@ func ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s := app.ShortLink([]byte(sReq.URL))
-	store.LinksMap[s] = sReq.URL
+	s, err := store.LinksMap.Write(sReq.URL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	sRes.Result = config.Config().BaseURL + "/" + s
 	jRes, _ := json.Marshal(sRes)

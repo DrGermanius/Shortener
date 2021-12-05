@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -202,7 +203,15 @@ func TestShortenHandler(t *testing.T) {
 func initTestData() {
 	config.NewConfig()
 
-	store.NewLinksMap()
+	err := store.NewLinksMap()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = store.Clear()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	gitShortLink := app.ShortLink([]byte(gitLink))
 	store.LinksMap[gitShortLink] = gitLink

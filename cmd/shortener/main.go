@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/DrGermanius/Shortener/internal/app"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
 	"github.com/DrGermanius/Shortener/internal/app/store"
@@ -15,7 +16,10 @@ import (
 func main() {
 	c := config.NewConfig()
 
-	store.NewLinksMap()
+	err := store.NewLinksMap()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
