@@ -46,7 +46,7 @@ func (l *Links) Write(long string) (string, error) {
 func (l *Links) readFile() error {
 	p := config.Config().FilePath
 
-	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0777)
+	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func writeFile(short, long string) error {
 
 	p := config.Config().FilePath
 
-	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}

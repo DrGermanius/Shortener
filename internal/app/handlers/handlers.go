@@ -8,6 +8,7 @@ import (
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
+	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
@@ -65,13 +66,8 @@ func ShortenHandler(w http.ResponseWriter, req *http.Request) {
 
 	defer req.Body.Close()
 
-	sReq := struct {
-		URL string `json:"url"`
-	}{}
-
-	sRes := struct {
-		Result string `json:"result"`
-	}{}
+	sReq := models.ShortenRequest{}
+	sRes := models.ShortenResponse{}
 
 	err = json.Unmarshal(b, &sReq)
 	if err != nil {
@@ -86,7 +82,11 @@ func ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	sRes.Result = config.Config().BaseURL + "/" + s
-	jRes, _ := json.Marshal(sRes)
+	jRes, err := json.Marshal(sRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

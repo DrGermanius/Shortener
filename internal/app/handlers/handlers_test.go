@@ -10,10 +10,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
+	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
@@ -62,18 +64,16 @@ func TestPostHandler(t *testing.T) {
 
 			defer res.Body.Close()
 			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			bodyStr := string(body)
 
 			if tt.want.err != nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
+				assert.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
 				return
 			}
 
-			require.Equal(t, tt.want.code, res.StatusCode)
+			assert.Equal(t, tt.want.code, res.StatusCode)
 			require.Equal(t, tt.want.response, bodyStr)
 
 		})
@@ -121,7 +121,7 @@ func TestGetHandler(t *testing.T) {
 			defer res.Body.Close()
 
 			if tt.want.err != nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
+				assert.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
 				return
 			}
@@ -154,21 +154,13 @@ func TestShortenHandler(t *testing.T) {
 	for _, tt := range tests {
 		initTestData()
 
-		sReq := struct {
-			URL string `json:"url"`
-		}{
-			URL: tt.link,
-		}
-
-		sRes := struct {
-			Result string `json:"result"`
-		}{}
+		sReq := models.ShortenRequest{URL: tt.link}
+		sRes := models.ShortenResponse{}
 
 		t.Run(tt.name, func(t *testing.T) {
 			body, err := json.Marshal(sReq)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
+
 			request := httptest.NewRequest(tt.method, "/api/shorten", bytes.NewBuffer(body))
 
 			w := httptest.NewRecorder()
@@ -178,23 +170,19 @@ func TestShortenHandler(t *testing.T) {
 
 			defer res.Body.Close()
 			resBody, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			err = json.Unmarshal(resBody, &sRes)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			if tt.want.err != nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
+				assert.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
 				return
 			}
 
 			require.Equal(t, sRes.Result, tt.shortLink)
-			require.Equal(t, res.Header.Get("Content-Type"), "application/json")
+			assert.Equal(t, res.Header.Get("Content-Type"), "application/json")
 
 		})
 	}
