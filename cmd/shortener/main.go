@@ -10,6 +10,7 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
+	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
@@ -23,6 +24,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(ml.GzipHandle)
 
 	r.Get("/{id}", handlers.GetShortLinkHandler)
 	r.Post("/", handlers.AddShortLinkHandler)
