@@ -1,16 +1,21 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
+	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
@@ -59,18 +64,16 @@ func TestPostHandler(t *testing.T) {
 
 			defer res.Body.Close()
 			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			bodyStr := string(body)
 
 			if tt.want.err != nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
+				assert.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
 				return
 			}
 
-			require.Equal(t, tt.want.code, res.StatusCode)
+			assert.Equal(t, tt.want.code, res.StatusCode)
 			require.Equal(t, tt.want.response, bodyStr)
 
 		})
@@ -115,9 +118,10 @@ func TestGetHandler(t *testing.T) {
 			h := http.HandlerFunc(GetShortLinkHandler)
 			h.ServeHTTP(w, request)
 			res := w.Result()
+			defer res.Body.Close()
 
 			if tt.want.err != nil {
-				require.Equal(t, tt.want.code, res.StatusCode)
+				assert.Equal(t, tt.want.code, res.StatusCode)
 				require.Error(t, tt.want.err)
 				return
 			}
@@ -129,10 +133,73 @@ func TestGetHandler(t *testing.T) {
 	}
 }
 
-func initTestData() {
-	config.NewConfig()
+func TestShortenHandler(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:      "positive test #5",
+			method:    http.MethodPost,
+			link:      gitLink,
+			shortLink: "http://localhost:8080/" + app.ShortLink([]byte(gitLink)),
+			want: want{
+				code: http.StatusCreated,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
 
-	store.NewLinksMap()
+		sReq := models.ShortenRequest{URL: tt.link}
+		sRes := models.ShortenResponse{}
+
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(sReq)
+			require.NoError(t, err)
+
+			request := httptest.NewRequest(tt.method, "/api/shorten", bytes.NewBuffer(body))
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(ShortenHandler)
+			h.ServeHTTP(w, request)
+			res := w.Result()
+
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			err = json.Unmarshal(resBody, &sRes)
+			require.NoError(t, err)
+
+			if tt.want.err != nil {
+				assert.Equal(t, tt.want.code, res.StatusCode)
+				require.Error(t, tt.want.err)
+				return
+			}
+
+			require.Equal(t, sRes.Result, tt.shortLink)
+			assert.Equal(t, res.Header.Get("Content-Type"), "application/json")
+
+		})
+	}
+}
+
+func initTestData() {
+	config.Suite()
+
+	err := store.NewLinksMap()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = store.Clear()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	gitShortLink := app.ShortLink([]byte(gitLink))
 	store.LinksMap[gitShortLink] = gitLink

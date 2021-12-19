@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
+	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
@@ -40,13 +42,56 @@ func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s := app.ShortLink(b)
-	store.LinksMap[s] = string(b)
+	s, err := store.LinksMap.Write(string(b))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	full := config.Config().Full() + "/" + s
+	full := config.Config().BaseURL + "/" + s
 
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(full))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+func ShortenHandler(w http.ResponseWriter, req *http.Request) {
+	b, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	defer req.Body.Close()
+
+	sReq := models.ShortenRequest{}
+	sRes := models.ShortenResponse{}
+
+	err = json.Unmarshal(b, &sReq)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s, err := store.LinksMap.Write(sReq.URL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	sRes.Result = config.Config().BaseURL + "/" + s
+	jRes, err := json.Marshal(sRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	_, err = w.Write(jRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
