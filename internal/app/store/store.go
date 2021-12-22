@@ -9,12 +9,17 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app/config"
 )
 
-type Links map[string]string
+type Links map[string]Info
+
+type Info struct {
+	Long string
+	Uuid string
+}
 
 var LinksMap Links
 
 func NewLinksMap() error {
-	LinksMap = make(map[string]string)
+	LinksMap = make(map[string]Info)
 	err := LinksMap.readFile()
 	if err != nil {
 		return err
@@ -31,11 +36,22 @@ func Clear() error {
 	return nil
 }
 
-func (l *Links) Write(long string) (string, error) {
-	s := app.ShortLink([]byte(long))
-	(*l)[s] = long
+func (l *Links) GetByUserId(id string) []link {
+	var res []link
+	for k, v := range LinksMap {
+		if v.Uuid == id {
+			res = append(res, link{Long: v.Long, Short: k})
+		}
+	}
 
-	err := writeFile(s, long)
+	return res
+}
+
+func (l *Links) Write(uuid, long string) (string, error) {
+	s := app.ShortLink([]byte(long))
+	(*l)[s] = Info{Long: long, Uuid: uuid}
+
+	err := writeFile(uuid, s, long)
 	if err != nil {
 		return "", err
 	}
@@ -60,13 +76,14 @@ func (l *Links) readFile() error {
 			return err
 		}
 
-		(*l)[link.Short] = link.Long
+		(*l)[link.Short] = Info{link.Long, link.UUID}
 	}
 	return nil
 }
 
-func writeFile(short, long string) error {
+func writeFile(uuid, short, long string) error {
 	m := link{
+		UUID:  uuid,
 		Short: short,
 		Long:  long,
 	}
@@ -101,6 +118,7 @@ func writeFile(short, long string) error {
 }
 
 type link struct {
-	Short string `json:"short"`
-	Long  string `json:"long"`
+	UUID  string `json:"uuid,omitempty"`
+	Short string `json:"short_url"`
+	Long  string `json:"original_url"`
 }

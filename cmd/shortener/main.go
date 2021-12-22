@@ -1,17 +1,15 @@
 package main
 
 import (
-	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
-	"log"
-	"net/http"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
+	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
 	"github.com/DrGermanius/Shortener/internal/app/store"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"log"
+	"net/http"
 )
 
 func main() {
@@ -28,6 +26,7 @@ func main() {
 	r.Use(ml.GzipDecompress)
 
 	r.Get("/{id}", handlers.GetShortLinkHandler)
+	r.Get("/user/urls", handlers.GetUserUrlsHandler)
 	r.Post("/", handlers.AddShortLinkHandler)
 	r.Post("/api/shorten", handlers.ShortenHandler)
 
