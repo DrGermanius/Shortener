@@ -202,7 +202,7 @@ func initTestData() {
 	}
 
 	gitShortLink := app.ShortLink([]byte(gitLink))
-	store.LinksMap[gitShortLink] = store.Info{gitLink, ""}
+	store.LinksMap[gitShortLink] = store.Info{Long: gitLink, UUID: ""}
 }
 
 type want struct {

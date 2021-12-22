@@ -59,6 +59,9 @@ func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	_, err = w.Write(jRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 }
 
 func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {

@@ -13,7 +13,7 @@ type Links map[string]Info
 
 type Info struct {
 	Long string
-	Uuid string
+	UUID string
 }
 
 var LinksMap Links
@@ -36,10 +36,10 @@ func Clear() error {
 	return nil
 }
 
-func (l *Links) GetByUserId(id string) []link {
+func (l *Links) GetByUserID(id string) []link {
 	var res []link
 	for k, v := range LinksMap {
-		if v.Uuid == id {
+		if v.UUID == id {
 			res = append(res, link{Long: v.Long, Short: k})
 		}
 	}
@@ -49,7 +49,7 @@ func (l *Links) GetByUserId(id string) []link {
 
 func (l *Links) Write(uuid, long string) (string, error) {
 	s := app.ShortLink([]byte(long))
-	(*l)[s] = Info{Long: long, Uuid: uuid}
+	(*l)[s] = Info{Long: long, UUID: uuid}
 
 	err := writeFile(uuid, s, long)
 	if err != nil {
