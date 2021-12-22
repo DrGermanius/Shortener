@@ -15,12 +15,12 @@ func (g gzipReaderCloser) Close() error {
 	return g.Closer.Close()
 }
 
-func GzipHandle(next http.Handler) http.Handler {
+func GzipDecompress(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			reader, err := gzip.NewReader(r.Body)
 			if err != nil {
-				return
+				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
 			r.Body = gzipReaderCloser{reader, r.Body}
 		}

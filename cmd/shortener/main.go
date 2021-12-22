@@ -25,7 +25,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Compress(5))
-	r.Use(ml.GzipHandle)
+	r.Use(ml.GzipDecompress)
 
 	r.Get("/{id}", handlers.GetShortLinkHandler)
 	r.Post("/", handlers.AddShortLinkHandler)
