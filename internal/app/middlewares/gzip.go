@@ -4,33 +4,26 @@ import (
 	"compress/gzip"
 	"io"
 	"net/http"
-	"strings"
 )
 
-type gzipWriter struct {
-	http.ResponseWriter
-	Writer io.Writer
+type gzipReaderCloser struct {
+	*gzip.Reader
+	io.Closer
 }
 
-func (w gzipWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
+func (g gzipReaderCloser) Close() error {
+	return g.Closer.Close()
 }
 
 func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			next.ServeHTTP(w, r)
-			return
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			reader, err := gzip.NewReader(r.Body)
+			if err != nil {
+				return
+			}
+			r.Body = gzipReaderCloser{reader, r.Body}
 		}
-
-		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
-		if err != nil {
-			io.WriteString(w, err.Error())
-			return
-		}
-		defer gz.Close()
-
-		w.Header().Set("Content-Encoding", "gzip")
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+		next.ServeHTTP(w, r)
 	})
 }
