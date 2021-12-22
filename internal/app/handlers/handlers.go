@@ -45,7 +45,7 @@ func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 
 	res := store.LinksMap.GetByUserID(uid)
 	if len(res) == 0 {
-		http.Error(w, "", http.StatusOK) //todo err
+		http.Error(w, "", http.StatusNoContent) //todo err
 		return
 	}
 
@@ -56,7 +56,7 @@ func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 
 	_, err = w.Write(jRes)
 	if err != nil {

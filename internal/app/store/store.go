@@ -40,7 +40,7 @@ func (l *Links) GetByUserID(id string) []link {
 	var res []link
 	for k, v := range LinksMap {
 		if v.UUID == id {
-			res = append(res, link{Long: v.Long, Short: k})
+			res = append(res, link{Long: v.Long, Short: config.Config().BaseURL + "/" + k}) //todo config.Config().BaseURL + "/"
 		}
 	}
 
