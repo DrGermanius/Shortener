@@ -2,9 +2,10 @@ package database
 
 import (
 	"context"
-	"github.com/DrGermanius/Shortener/internal/app/models"
 
 	"github.com/jackc/pgx/v4"
+
+	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
 type DB struct {
@@ -31,6 +32,6 @@ func (d *DB) Write(uuid, long string) (string, error) {
 	return "", nil
 }
 
-func (d *DB) Ping() bool {
-	return false
+func (d *DB) Ping(ctx context.Context) bool {
+	return d.conn.Ping(ctx) != nil
 }

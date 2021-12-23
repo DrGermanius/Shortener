@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -16,7 +17,7 @@ type LinksStorager interface {
 	Get(string) (string, bool)
 	GetByUserID(id string) []models.LinkJSON
 	Write(uuid, long string) (string, error)
-	Ping() bool
+	Ping(ctx context.Context) bool
 }
 
 type Handlers struct {
@@ -51,7 +52,7 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 }
 
 func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
-	if h.store.Ping() {
+	if h.store.Ping(context.Background()) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte{})
 		if err != nil {

@@ -2,6 +2,7 @@ package memory
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 
@@ -22,7 +23,8 @@ func NewLinkMemoryStore() (*LinkMemoryStore, error) {
 	return &LinksMap, nil
 }
 
-func (l *LinkMemoryStore) Ping() bool {
+func (l *LinkMemoryStore) Ping(ctx context.Context) bool {
+	_ = ctx
 	return true //todo
 }
 
