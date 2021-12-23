@@ -19,7 +19,7 @@ func main() {
 
 	c := config.NewConfig()
 
-	if c.ConnectionString == "" {
+	if c.ConnectionString != "" {
 		store, err = memory.NewLinkMemoryStore()
 		if err != nil {
 			log.Fatalln(err)
