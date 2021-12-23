@@ -4,7 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"encoding/hex"
-	"errors"
+	"github.com/DrGermanius/Shortener/internal/app"
 
 	"github.com/google/uuid"
 )
@@ -14,6 +14,10 @@ const AuthCookie = "UserID"
 var key = []byte("secret")
 
 func CheckSignature(s string) (string, error) {
+	if len(s) < 36 {
+		return "", app.ErrInvalidSignature
+	}
+
 	data := []byte(s)
 	uid := data[:36]
 
@@ -26,7 +30,7 @@ func CheckSignature(s string) (string, error) {
 		return string(uid), nil
 	}
 
-	return "", errors.New("invalid Signature")
+	return "", app.ErrInvalidSignature
 }
 
 func GetSignature() (string, error) {

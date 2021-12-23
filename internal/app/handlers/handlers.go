@@ -45,7 +45,7 @@ func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 
 	res := store.LinksMap.GetByUserID(uid)
 	if len(res) == 0 {
-		http.Error(w, "", http.StatusNoContent)
+		http.Error(w, app.ErrUserHasNoRecords.Error(), http.StatusNoContent)
 		return
 	}
 
@@ -150,19 +150,19 @@ func checkAuthCookie(w http.ResponseWriter, req *http.Request) (string, error) {
 	if err != nil {
 		signaturedUUID, err := auth.GetSignature()
 		if err != nil {
-			return "", nil
+			return "", err
 		}
 
 		uid, err = auth.CheckSignature(signaturedUUID)
 		if err != nil {
-			return "", nil
+			return "", err
 		}
 		http.SetCookie(w, &http.Cookie{Name: auth.AuthCookie, Value: signaturedUUID})
 
 	} else {
 		uid, err = auth.CheckSignature(authCookie.Value)
 		if err != nil {
-			return "", nil
+			return "", err
 		}
 	}
 	return uid, nil

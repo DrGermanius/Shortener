@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"io"
 	"log"
 	"net/http"
@@ -23,6 +24,8 @@ const (
 	gitLink    = "https://github.com"
 	yandexLink = "https://yandex.ru"
 )
+
+var fakeSignature string
 
 func TestPostHandler(t *testing.T) {
 	tests := []struct {
@@ -183,6 +186,97 @@ func TestShortenHandler(t *testing.T) {
 
 			require.Equal(t, sRes.Result, tt.shortLink)
 			assert.Equal(t, res.Header.Get("Content-Type"), "application/json")
+
+		})
+	}
+}
+
+func TestGetUserUrls(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:   "negative test #6",
+			method: http.MethodGet,
+			want: want{
+				code: http.StatusInternalServerError,
+				err:  app.ErrInvalidSignature,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(tt.method, "/user/urls", nil)
+			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: "123"}
+			request.AddCookie(authCookie)
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(GetUserUrlsHandler)
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if tt.want.err != nil {
+				assert.Equal(t, tt.want.code, res.StatusCode)
+				require.Error(t, tt.want.err)
+				return
+			}
+
+			require.Equal(t, tt.want.code, res.StatusCode)
+			require.Equal(t, res.Header.Get("Location"), tt.link)
+
+		})
+	}
+}
+
+func TestGetUserUrlsWithFakeCookie(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:   "negative test #6",
+			method: http.MethodGet,
+			want: want{
+				code: http.StatusNoContent,
+				err:  app.ErrUserHasNoRecords,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+		t.Run(tt.name, func(t *testing.T) {
+			authCookieValue, err := auth.GetSignature()
+			require.NoError(t, err)
+			request := httptest.NewRequest(tt.method, "/user/urls", nil)
+			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: authCookieValue}
+			request.AddCookie(authCookie)
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(GetUserUrlsHandler)
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if tt.want.err != nil {
+				assert.Equal(t, tt.want.code, res.StatusCode)
+				require.Error(t, tt.want.err)
+				return
+			}
+
+			require.Equal(t, tt.want.code, res.StatusCode)
+			require.Equal(t, res.Header.Get("Location"), tt.link)
 
 		})
 	}
