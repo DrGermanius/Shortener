@@ -1,4 +1,4 @@
-package store
+package memory
 
 import (
 	"bufio"
@@ -7,22 +7,71 @@ import (
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
+	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
-type Links map[string]Info
+type MemoryStore map[string]models.LinkInfo
 
-type Info struct {
-	Long string
-	UUID string
-}
+func NewLinkMemoryStore() (*MemoryStore, error) {
+	LinksMap := make(MemoryStore)
 
-var LinksMap Links
-
-func NewLinksMap() error {
-	LinksMap = make(map[string]Info)
 	err := LinksMap.readFile()
 	if err != nil {
+		return nil, err
+	}
+	return &LinksMap, nil
+}
+
+func (l *MemoryStore) Ping() bool {
+	return true //todo
+}
+
+func (l *MemoryStore) Get(s string) (string, bool) {
+	long, exist := (*l)[s]
+	return long.Long, exist
+}
+
+func (l *MemoryStore) GetByUserID(id string) []models.LinkJson {
+	var res []models.LinkJson
+	for k, v := range *l {
+		if v.UUID == id {
+			res = append(res, models.LinkJson{Long: v.Long, Short: config.Config().BaseURL + "/" + k}) //todo config.Config().BaseURL + "/"
+		}
+	}
+
+	return res
+}
+
+func (l *MemoryStore) Write(uuid, long string) (string, error) {
+	s := app.ShortLink([]byte(long))
+	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid}
+
+	err := writeFile(uuid, s, long)
+	if err != nil {
+		return "", err
+	}
+
+	return s, nil
+}
+
+func (l *MemoryStore) readFile() error {
+	p := config.Config().FilePath
+
+	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0644)
+	if err != nil {
 		return err
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+
+	for s.Scan() {
+		var link models.LinkJson
+		err = json.Unmarshal(s.Bytes(), &link)
+		if err != nil {
+			return err
+		}
+
+		(*l)[link.Short] = models.LinkInfo{Long: link.Long, UUID: link.UUID}
 	}
 	return nil
 }
@@ -36,53 +85,8 @@ func Clear() error {
 	return nil
 }
 
-func (l *Links) GetByUserID(id string) []link {
-	var res []link
-	for k, v := range LinksMap {
-		if v.UUID == id {
-			res = append(res, link{Long: v.Long, Short: config.Config().BaseURL + "/" + k}) //todo config.Config().BaseURL + "/"
-		}
-	}
-
-	return res
-}
-
-func (l *Links) Write(uuid, long string) (string, error) {
-	s := app.ShortLink([]byte(long))
-	(*l)[s] = Info{Long: long, UUID: uuid}
-
-	err := writeFile(uuid, s, long)
-	if err != nil {
-		return "", err
-	}
-
-	return s, nil
-}
-
-func (l *Links) readFile() error {
-	p := config.Config().FilePath
-
-	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	s := bufio.NewScanner(f)
-
-	for s.Scan() {
-		var link link
-		err = json.Unmarshal(s.Bytes(), &link)
-		if err != nil {
-			return err
-		}
-
-		(*l)[link.Short] = Info{link.Long, link.UUID}
-	}
-	return nil
-}
-
 func writeFile(uuid, short, long string) error {
-	m := link{
+	m := models.LinkJson{
 		UUID:  uuid,
 		Short: short,
 		Long:  long,
@@ -115,10 +119,4 @@ func writeFile(uuid, short, long string) error {
 		return err
 	}
 	return nil
-}
-
-type link struct {
-	UUID  string `json:"uuid,omitempty"`
-	Short string `json:"short_url"`
-	Long  string `json:"original_url"`
 }

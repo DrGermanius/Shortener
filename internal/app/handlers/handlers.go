@@ -10,10 +10,24 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/models"
-	"github.com/DrGermanius/Shortener/internal/app/store"
 )
 
-func GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
+type LinksStorager interface {
+	Get(string) (string, bool)
+	GetByUserID(id string) []models.LinkJson
+	Write(uuid, long string) (string, error)
+	Ping() bool
+}
+
+type Handlers struct {
+	store LinksStorager
+}
+
+func NewHandlers(store LinksStorager) *Handlers {
+	return &Handlers{store: store}
+}
+
+func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	_, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -22,9 +36,9 @@ func GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 
 	s := req.URL.Path[1:] // skip "/" from path; chi.UrlParam not working in tests
 
-	l, exist := store.LinksMap[s]
+	l, exist := h.store.Get(s)
 	if exist {
-		w.Header().Add("Location", l.Long)
+		w.Header().Add("Location", l)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 
 		_, err := w.Write([]byte{})
@@ -36,14 +50,18 @@ func GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
+func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
+
+}
+
+func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res := store.LinksMap.GetByUserID(uid)
+	res := h.store.GetByUserID(uid)
 	if len(res) == 0 {
 		http.Error(w, app.ErrUserHasNoRecords.Error(), http.StatusNoContent)
 		return
@@ -64,7 +82,7 @@ func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
+func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -83,7 +101,7 @@ func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s, err := store.LinksMap.Write(uid, string(b))
+	s, err := h.store.Write(uid, string(b))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -98,7 +116,7 @@ func AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func ShortenHandler(w http.ResponseWriter, req *http.Request) {
+func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -122,7 +140,7 @@ func ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s, err := store.LinksMap.Write(uid, sReq.URL)
+	s, err := h.store.Write(uid, sReq.URL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
