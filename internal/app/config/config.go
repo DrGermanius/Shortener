@@ -8,9 +8,10 @@ import (
 var c *config
 
 const (
-	baseURL       = "BASE_URL"
-	serverAddress = "SERVER_ADDRESS"
-	filePathEnv   = "FILE_STORAGE_PATH"
+	baseURL            = "BASE_URL"
+	serverAddress      = "SERVER_ADDRESS"
+	filePathEnv        = "FILE_STORAGE_PATH"
+	dbConnectionString = "DATABASE_DSN"
 
 	defaultFilePath      = "./tmp"
 	defaultServerAddress = "localhost:8080"
@@ -18,9 +19,10 @@ const (
 )
 
 type config struct {
-	BaseURL       string
-	ServerAddress string
-	FilePath      string
+	BaseURL          string
+	ServerAddress    string
+	FilePath         string
+	ConnectionString string
 }
 
 func NewConfig() *config {
@@ -43,11 +45,18 @@ func NewConfig() *config {
 		f = defaultFilePath
 	}
 	flag.StringVar(&f, "f", f, "filePath for links")
+
+	d, e := os.LookupEnv(dbConnectionString)
+	if !e {
+		d = ""
+	}
+	flag.StringVar(&d, "d", d, "postgres connection path")
 	flag.Parse()
 
 	c.ServerAddress = a
 	c.BaseURL = b
 	c.FilePath = f
+	c.ConnectionString = d
 
 	return c
 }

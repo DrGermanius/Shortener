@@ -10,10 +10,10 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
-type MemoryStore map[string]models.LinkInfo
+type LinkMemoryStore map[string]models.LinkInfo
 
-func NewLinkMemoryStore() (*MemoryStore, error) {
-	LinksMap := make(MemoryStore)
+func NewLinkMemoryStore() (*LinkMemoryStore, error) {
+	LinksMap := make(LinkMemoryStore)
 
 	err := LinksMap.readFile()
 	if err != nil {
@@ -22,16 +22,16 @@ func NewLinkMemoryStore() (*MemoryStore, error) {
 	return &LinksMap, nil
 }
 
-func (l *MemoryStore) Ping() bool {
+func (l *LinkMemoryStore) Ping() bool {
 	return true //todo
 }
 
-func (l *MemoryStore) Get(s string) (string, bool) {
+func (l *LinkMemoryStore) Get(s string) (string, bool) {
 	long, exist := (*l)[s]
 	return long.Long, exist
 }
 
-func (l *MemoryStore) GetByUserID(id string) []models.LinkJSON {
+func (l *LinkMemoryStore) GetByUserID(id string) []models.LinkJSON {
 	var res []models.LinkJSON
 	for k, v := range *l {
 		if v.UUID == id {
@@ -42,7 +42,7 @@ func (l *MemoryStore) GetByUserID(id string) []models.LinkJSON {
 	return res
 }
 
-func (l *MemoryStore) Write(uuid, long string) (string, error) {
+func (l *LinkMemoryStore) Write(uuid, long string) (string, error) {
 	s := app.ShortLink([]byte(long))
 	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid}
 
@@ -54,7 +54,7 @@ func (l *MemoryStore) Write(uuid, long string) (string, error) {
 	return s, nil
 }
 
-func (l *MemoryStore) readFile() error {
+func (l *LinkMemoryStore) readFile() error {
 	p := config.Config().FilePath
 
 	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0644)

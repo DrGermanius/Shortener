@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
+	"github.com/DrGermanius/Shortener/internal/app/database"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
 	"github.com/DrGermanius/Shortener/internal/app/memory"
 	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
@@ -13,14 +14,24 @@ import (
 )
 
 func main() {
+	var err error
+	var store handlers.LinksStorager
+
 	c := config.NewConfig()
 
-	linksMemoryStore, err := memory.NewLinkMemoryStore()
-	if err != nil {
-		log.Fatalln(err)
+	if c.ConnectionString != "" {
+		store, err = memory.NewLinkMemoryStore()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		store, err = database.NewDatabaseStorage(c.ConnectionString)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
 
-	h := handlers.NewHandlers(linksMemoryStore)
+	h := handlers.NewHandlers(store)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

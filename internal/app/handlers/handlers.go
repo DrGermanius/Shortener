@@ -51,7 +51,14 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 }
 
 func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
-
+	if h.store.Ping() {
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		_, err := w.Write([]byte{})
+		if err != nil {
+			log.Print(err)
+		}
+	}
+	http.Error(w, app.ErrLinkNotFound.Error(), http.StatusInternalServerError)
 }
 
 func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
