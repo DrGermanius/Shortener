@@ -3,8 +3,8 @@ package auth
 import (
 	"crypto/hmac"
 	"crypto/md5"
+	"encoding/hex"
 	"errors"
-	"net/url"
 
 	"github.com/google/uuid"
 )
@@ -49,5 +49,5 @@ func calculateSignature(b []byte) ([]byte, error) {
 	}
 
 	res := h.Sum(nil)
-	return []byte(url.QueryEscape(string(res))), nil //cringe, but cookies can't store some symbols.QueryEscape helps
+	return []byte(hex.EncodeToString(res)), nil
 }

@@ -45,7 +45,7 @@ func GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 
 	res := store.LinksMap.GetByUserID(uid)
 	if len(res) == 0 {
-		http.Error(w, "", http.StatusNoContent) //todo err
+		http.Error(w, "", http.StatusNoContent)
 		return
 	}
 

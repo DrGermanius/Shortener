@@ -1,15 +1,17 @@
 package main
 
 import (
+	"log"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
 	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
 	"github.com/DrGermanius/Shortener/internal/app/store"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"log"
-	"net/http"
 )
 
 func main() {
