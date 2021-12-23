@@ -14,7 +14,7 @@ import (
 
 type LinksStorager interface {
 	Get(string) (string, bool)
-	GetByUserID(id string) []models.LinkJson
+	GetByUserID(id string) []models.LinkJSON
 	Write(uuid, long string) (string, error)
 	Ping() bool
 }

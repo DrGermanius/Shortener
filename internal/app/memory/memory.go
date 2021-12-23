@@ -31,11 +31,11 @@ func (l *MemoryStore) Get(s string) (string, bool) {
 	return long.Long, exist
 }
 
-func (l *MemoryStore) GetByUserID(id string) []models.LinkJson {
-	var res []models.LinkJson
+func (l *MemoryStore) GetByUserID(id string) []models.LinkJSON {
+	var res []models.LinkJSON
 	for k, v := range *l {
 		if v.UUID == id {
-			res = append(res, models.LinkJson{Long: v.Long, Short: config.Config().BaseURL + "/" + k}) //todo config.Config().BaseURL + "/"
+			res = append(res, models.LinkJSON{Long: v.Long, Short: config.Config().BaseURL + "/" + k}) //todo config.Config().BaseURL + "/"
 		}
 	}
 
@@ -65,7 +65,7 @@ func (l *MemoryStore) readFile() error {
 	s := bufio.NewScanner(f)
 
 	for s.Scan() {
-		var link models.LinkJson
+		var link models.LinkJSON
 		err = json.Unmarshal(s.Bytes(), &link)
 		if err != nil {
 			return err
@@ -86,7 +86,7 @@ func Clear() error {
 }
 
 func writeFile(uuid, short, long string) error {
-	m := models.LinkJson{
+	m := models.LinkJSON{
 		UUID:  uuid,
 		Short: short,
 		Long:  long,

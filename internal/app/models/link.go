@@ -5,7 +5,7 @@ type LinkInfo struct {
 	UUID string
 }
 
-type LinkJson struct {
+type LinkJSON struct {
 	UUID  string `json:"uuid,omitempty"`
 	Short string `json:"short_url"`
 	Long  string `json:"original_url"`
