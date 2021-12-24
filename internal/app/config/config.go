@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 )
 
@@ -25,6 +26,13 @@ type config struct {
 	ConnectionString string
 }
 
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "12345"
+)
+
 func NewConfig() *config {
 	c = new(config)
 
@@ -46,9 +54,13 @@ func NewConfig() *config {
 	}
 	flag.StringVar(&f, "f", f, "filePath for links")
 
+	conn := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s sslmode=disable",
+		host, port, user, password)
+
 	d, e := os.LookupEnv(dbConnectionString)
 	if !e {
-		d = ""
+		d = conn
 	}
 	flag.StringVar(&d, "d", d, "postgres connection path")
 	flag.Parse()
@@ -82,6 +94,7 @@ func Suite() *config { //todo rewrite after lesson about TestSuite
 	c.ServerAddress = a
 	c.BaseURL = b
 	c.FilePath = f
+	c.ConnectionString = ""
 
 	return c
 }

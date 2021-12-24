@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -297,7 +298,7 @@ func initTestData() {
 		log.Fatalln(err)
 	}
 
-	_, err = linksMemoryStore.Write("", gitLink)
+	_, err = linksMemoryStore.Write(context.Background(), "", gitLink)
 	if err != nil {
 		log.Fatalln(err)
 	}

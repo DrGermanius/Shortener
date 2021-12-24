@@ -28,12 +28,17 @@ func (l *LinkMemoryStore) Ping(ctx context.Context) bool {
 	return true //todo
 }
 
-func (l *LinkMemoryStore) Get(s string) (string, bool) {
+func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
+	_ = ctx
 	long, exist := (*l)[s]
-	return long.Long, exist
+	if !exist {
+		return "", app.ErrLinkNotFound
+	}
+	return long.Long, nil
 }
 
-func (l *LinkMemoryStore) GetByUserID(id string) []models.LinkJSON {
+func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, error) {
+	_ = ctx
 	var res []models.LinkJSON
 	for k, v := range *l {
 		if v.UUID == id {
@@ -41,10 +46,15 @@ func (l *LinkMemoryStore) GetByUserID(id string) []models.LinkJSON {
 		}
 	}
 
-	return res
+	if len(res) == 0 {
+		return nil, app.ErrUserHasNoRecords
+	}
+
+	return &res, nil
 }
 
-func (l *LinkMemoryStore) Write(uuid, long string) (string, error) {
+func (l *LinkMemoryStore) Write(ctx context.Context, uuid, long string) (string, error) {
+	_ = ctx
 	s := app.ShortLink([]byte(long))
 	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid}
 

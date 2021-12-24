@@ -14,9 +14,9 @@ import (
 )
 
 type LinksStorager interface {
-	Get(string) (string, bool)
-	GetByUserID(id string) []models.LinkJSON
-	Write(uuid, long string) (string, error)
+	Get(context.Context, string) (string, error)
+	GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, error)
+	Write(ctx context.Context, uuid, long string) (string, error)
 	Ping(ctx context.Context) bool
 }
 
@@ -37,17 +37,17 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 
 	s := req.URL.Path[1:] // skip "/" from path; chi.UrlParam not working in tests
 
-	l, exist := h.store.Get(s)
-	if exist {
-		w.Header().Add("Location", l)
-		w.WriteHeader(http.StatusTemporaryRedirect)
+	l, err := h.store.Get(req.Context(), s)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 
-		_, err := w.Write([]byte{})
-		if err != nil {
-			log.Print(err)
-		}
-	} else {
-		http.Error(w, app.ErrLinkNotFound.Error(), http.StatusBadRequest)
+	w.Header().Add("Location", l)
+	w.WriteHeader(http.StatusTemporaryRedirect)
+
+	_, err = w.Write([]byte{})
+	if err != nil {
+		log.Print(err)
 	}
 }
 
@@ -69,9 +69,12 @@ func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	res := h.store.GetByUserID(uid)
-	if len(res) == 0 {
-		http.Error(w, app.ErrUserHasNoRecords.Error(), http.StatusNoContent)
+	res, err := h.store.GetByUserID(req.Context(), uid)
+	if err == app.ErrUserHasNoRecords {
+		http.Error(w, err.Error(), http.StatusNoContent)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -109,7 +112,7 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	s, err := h.store.Write(uid, string(b))
+	s, err := h.store.Write(req.Context(), uid, string(b))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -148,7 +151,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	s, err := h.store.Write(uid, sReq.URL)
+	s, err := h.store.Write(req.Context(), uid, sReq.URL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

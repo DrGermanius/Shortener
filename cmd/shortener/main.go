@@ -19,16 +19,18 @@ func main() {
 
 	c := config.NewConfig()
 
-	if c.ConnectionString != "" {
+	if c.ConnectionString == "" {
 		store, err = memory.NewLinkMemoryStore()
 		if err != nil {
 			log.Fatalln(err)
 		}
+		log.Println("Service uses inmemory storage")
 	} else {
 		store, err = database.NewDatabaseStorage(c.ConnectionString)
 		if err != nil {
 			log.Fatalln(err)
 		}
+		log.Println("Service uses database")
 	}
 
 	h := handlers.NewHandlers(store)
