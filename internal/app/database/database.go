@@ -96,7 +96,7 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 }
 
 func (d *DB) Ping(ctx context.Context) bool {
-	return d.conn.Ping(ctx) != nil
+	return d.conn.Ping(ctx) == nil
 }
 
 func createDatabaseAndTable(c *pgxpool.Pool) error {
