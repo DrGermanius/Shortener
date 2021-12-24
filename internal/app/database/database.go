@@ -67,6 +67,10 @@ func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, er
 		return nil, err
 	}
 
+	if !rows.Next() {
+		return nil, app.ErrUserHasNoRecords
+	}
+
 	for rows.Next() {
 		var l models.LinkJSON
 		err = rows.Scan(&l.UUID, &l.Long, &l.Short)
