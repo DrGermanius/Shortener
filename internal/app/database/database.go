@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	checkDbExistQuery   = "SELECT 1 FROM pg_catalog.pg_database WHERE datname = 'links'"
-	createDataBaseQuery = "CREATE DATABASE links"
-	createTableQuery    = "CREATE TABLE links (" +
+	checkDBExistQuery = "SELECT 1 FROM pg_catalog.pg_database WHERE datname = 'links'"
+	createDBQuery     = "CREATE DATABASE links"
+	createTableQuery  = "CREATE TABLE links (" +
 		"id    		SERIAL 			PRIMARY KEY," +
 		"user_id    VARCHAR ( 50 )  NOT NULL," +
 		"long_link  VARCHAR  		NOT NULL," +
@@ -100,13 +100,13 @@ func (d *DB) Ping(ctx context.Context) bool {
 }
 
 func createDatabaseAndTable(c *pgxpool.Pool) error {
-	rows, err := c.Query(context.Background(), checkDbExistQuery)
+	rows, err := c.Query(context.Background(), checkDBExistQuery)
 	if err != nil {
 		return err
 	}
 
 	if !rows.Next() {
-		_, err = c.Exec(context.Background(), createDataBaseQuery)
+		_, err = c.Exec(context.Background(), createDBQuery)
 		if err != nil {
 			return err
 		}
