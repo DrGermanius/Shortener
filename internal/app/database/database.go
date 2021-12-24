@@ -20,7 +20,7 @@ const (
 		");"
 
 	linkFields             = "user_id, long_link, short_link"
-	insertLinkQuery        = "INSERT INTO links VALUES ( $1, $2, $3 )"
+	insertLinkQuery        = "INSERT INTO links  (" + linkFields + ") VALUES ( $1, $2, $3 )"
 	selectByUserIDQuery    = "SELECT " + linkFields + " FROM links where user_id = $1"
 	selectByShortLinkQuery = "SELECT long_link FROM links where short_link = $1"
 )
@@ -85,7 +85,6 @@ func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, er
 }
 
 func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
-
 	short := app.ShortLink([]byte(long))
 
 	_, err := d.conn.Exec(ctx, insertLinkQuery, uuid, long, short)
