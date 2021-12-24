@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"github.com/DrGermanius/Shortener/internal/app/util"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -69,6 +70,8 @@ func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, er
 	for rows.Next() {
 		var l models.LinkJSON
 		err = rows.Scan(&l.UUID, &l.Long, &l.Short)
+		l.Short = util.FullLink(l.Short)
+
 		if err != nil {
 			return nil, err
 		}

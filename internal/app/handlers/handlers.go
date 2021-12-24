@@ -3,13 +3,13 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"github.com/DrGermanius/Shortener/internal/app/util"
 	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
-	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
@@ -118,7 +118,7 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	full := config.Config().BaseURL + "/" + s
+	full := util.FullLink(s)
 
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(full))
@@ -157,7 +157,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sRes.Result = config.Config().BaseURL + "/" + s
+	sRes.Result = util.FullLink(s)
 	jRes, err := json.Marshal(sRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

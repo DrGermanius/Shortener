@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"github.com/DrGermanius/Shortener/internal/app/util"
 	"os"
 
 	"github.com/DrGermanius/Shortener/internal/app"
@@ -42,7 +43,7 @@ func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) (*[]models
 	var res []models.LinkJSON
 	for k, v := range *l {
 		if v.UUID == id {
-			res = append(res, models.LinkJSON{Long: v.Long, Short: config.Config().BaseURL + "/" + k}) //todo config.Config().BaseURL + "/"
+			res = append(res, models.LinkJSON{Long: v.Long, Short: util.FullLink(k)})
 		}
 	}
 
