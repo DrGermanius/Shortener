@@ -48,6 +48,7 @@ func (d *DB) Get(ctx context.Context, short string) (string, error) {
 	var long string
 
 	row := d.conn.QueryRow(ctx, selectByShortLinkQuery, short)
+
 	err := row.Scan(&long)
 	if err == pgx.ErrNoRows {
 		return "", app.ErrLinkNotFound
@@ -66,10 +67,7 @@ func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, er
 	if err != nil {
 		return nil, err
 	}
-
-	if !rows.Next() {
-		return nil, app.ErrUserHasNoRecords
-	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var l models.LinkJSON
@@ -86,6 +84,10 @@ func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, er
 	err = rows.Err()
 	if err != nil {
 		return nil, err
+	}
+
+	if len(links) == 0 {
+		return nil, app.ErrUserHasNoRecords
 	}
 
 	return &links, nil
