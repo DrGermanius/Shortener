@@ -115,14 +115,19 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	linkAlreadyExist := false
 	s, err := h.store.Write(req.Context(), uid, string(b))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		if errors.Is(err, app.ErrLinkAlreadyExists) {
+			linkAlreadyExist = true
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 	full := util.FullLink(s)
 
-	if errors.Is(err, app.ErrLinkAlreadyExists) {
+	if linkAlreadyExist {
 		w.WriteHeader(http.StatusConflict)
 	} else {
 		w.WriteHeader(http.StatusCreated)
@@ -158,10 +163,15 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	linkAlreadyExist := false
 	s, err := h.store.Write(req.Context(), uid, sReq.URL)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		if errors.Is(err, app.ErrLinkAlreadyExists) {
+			linkAlreadyExist = true
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	sRes.Result = util.FullLink(s)
@@ -172,7 +182,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if errors.Is(err, app.ErrLinkAlreadyExists) {
+	if linkAlreadyExist {
 		w.WriteHeader(http.StatusConflict)
 	} else {
 		w.WriteHeader(http.StatusCreated)
