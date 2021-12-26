@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/DrGermanius/Shortener/internal/app/util"
 	"io"
 	"log"
 	"net/http"
@@ -246,7 +247,7 @@ func TestGetUserUrlsWithFakeCookie(t *testing.T) {
 		want      want
 	}{
 		{
-			name:   "negative test #6",
+			name:   "negative test #7",
 			method: http.MethodGet,
 			want: want{
 				code: http.StatusNoContent,
@@ -279,6 +280,62 @@ func TestGetUserUrlsWithFakeCookie(t *testing.T) {
 			require.Equal(t, tt.want.code, res.StatusCode)
 			require.Equal(t, res.Header.Get("Location"), tt.link)
 
+		})
+	}
+}
+
+func TestButchLinks(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:   "positive test #8",
+			method: http.MethodPost,
+			want: want{
+				code: http.StatusCreated,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+		t.Run(tt.name, func(t *testing.T) {
+
+			req, err := json.Marshal([]models.BatchOriginal{
+				{CorrelationID: "1",
+					OriginalURL: gitLink},
+				{CorrelationID: "2",
+					OriginalURL: yandexLink},
+			})
+			require.NoError(t, err)
+
+			expectedRes := []models.BatchShort{
+				{CorrelationID: "1",
+					ShortURL: util.FullLink(app.ShortLink([]byte(gitLink)))},
+				{CorrelationID: "2",
+					ShortURL: util.FullLink(app.ShortLink([]byte(yandexLink)))},
+			}
+
+			request := httptest.NewRequest(tt.method, "/user/urls", bytes.NewBuffer(req))
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(H.BatchHandler)
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			var actualRes []models.BatchShort
+			err = json.Unmarshal(resBody, &actualRes)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.want.code, res.StatusCode)
+			require.Equal(t, expectedRes, actualRes)
 		})
 	}
 }
