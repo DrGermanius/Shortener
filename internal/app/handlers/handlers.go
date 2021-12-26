@@ -206,7 +206,7 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	batchRes := make([]models.BatchShort, 0, len(batchReq))
 	for i := 0; i < len(batchReq); i++ {
 		batchRes = append(batchRes, models.BatchShort{
-			CorrelationId: batchReq[i].CorrelationId,
+			CorrelationID: batchReq[i].CorrelationID,
 			ShortURL:      util.FullLink(shorts[i]),
 		})
 	}
