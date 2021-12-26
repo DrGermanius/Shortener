@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/DrGermanius/Shortener/internal/app/util"
 	"io/ioutil"
 	"log"
@@ -71,10 +72,11 @@ func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) 
 	}
 
 	res, err := h.store.GetByUserID(req.Context(), uid)
-	if err == app.ErrUserHasNoRecords {
-		http.Error(w, err.Error(), http.StatusNoContent)
-		return
-	} else if err != nil {
+	if err != nil {
+		if errors.Is(err, app.ErrUserHasNoRecords) {
+			http.Error(w, err.Error(), http.StatusNoContent)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -114,6 +116,10 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 	}
 
 	s, err := h.store.Write(req.Context(), uid, string(b))
+	if errors.Is(err, app.ErrLinkAlreadyExists) {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -153,6 +159,10 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	s, err := h.store.Write(req.Context(), uid, sReq.URL)
+	if errors.Is(err, app.ErrLinkAlreadyExists) {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

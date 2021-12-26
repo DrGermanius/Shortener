@@ -2,12 +2,15 @@ package database
 
 import (
 	"context"
+	"errors"
 	"github.com/DrGermanius/Shortener/internal/app/util"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/models"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 const (
@@ -17,7 +20,8 @@ const (
 		"id    		SERIAL 			PRIMARY KEY," +
 		"user_id    VARCHAR ( 50 )  NOT NULL," +
 		"long_link  VARCHAR  		NOT NULL," +
-		"short_link VARCHAR  		NOT NULL" +
+		"short_link VARCHAR  		NOT NULL," +
+		"UNIQUE(long_link)" +
 		");"
 
 	linkFields = "user_id, long_link, short_link"
@@ -51,7 +55,7 @@ func (d *DB) Get(ctx context.Context, short string) (string, error) {
 	row := d.conn.QueryRow(ctx, selectByShortLinkQuery, short)
 
 	err := row.Scan(&long)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", app.ErrLinkNotFound
 	}
 	if err != nil {
@@ -98,7 +102,12 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 	short := app.ShortLink([]byte(long))
 
 	_, err := d.conn.Exec(ctx, insertLinkQuery, uuid, long, short)
+
 	if err != nil {
+		pgErr := new(pgconn.PgError)
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return "", app.ErrLinkAlreadyExists
+		}
 		return "", err
 	}
 
