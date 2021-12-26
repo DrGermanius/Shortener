@@ -116,18 +116,18 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 	}
 
 	s, err := h.store.Write(req.Context(), uid, string(b))
-	if errors.Is(err, app.ErrLinkAlreadyExists) {
-		http.Error(w, err.Error(), http.StatusConflict)
-		return
-	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	full := util.FullLink(s)
 
-	w.WriteHeader(http.StatusCreated)
+	if errors.Is(err, app.ErrLinkAlreadyExists) {
+		w.WriteHeader(http.StatusConflict)
+	} else {
+		w.WriteHeader(http.StatusCreated)
+	}
+
 	_, err = w.Write([]byte(full))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -159,10 +159,6 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	s, err := h.store.Write(req.Context(), uid, sReq.URL)
-	if errors.Is(err, app.ErrLinkAlreadyExists) {
-		http.Error(w, err.Error(), http.StatusConflict)
-		return
-	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -176,7 +172,11 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	if errors.Is(err, app.ErrLinkAlreadyExists) {
+		w.WriteHeader(http.StatusConflict)
+	} else {
+		w.WriteHeader(http.StatusCreated)
+	}
 
 	_, err = w.Write(jRes)
 	if err != nil {

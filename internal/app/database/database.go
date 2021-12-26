@@ -106,7 +106,7 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 	if err != nil {
 		pgErr := new(pgconn.PgError)
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return "", app.ErrLinkAlreadyExists
+			return short, app.ErrLinkAlreadyExists
 		}
 		return "", err
 	}
