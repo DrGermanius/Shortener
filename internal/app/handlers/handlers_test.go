@@ -341,10 +341,7 @@ func TestButchLinks(t *testing.T) {
 }
 
 func initTestData() {
-	_, err := config.TestConfig()
-	if err != nil {
-		log.Fatalln(err)
-	}
+	config.SetTestConfig()
 
 	linksMemoryStore, err := memory.NewLinkMemoryStore()
 	if err != nil {

@@ -17,10 +17,7 @@ func main() {
 	var err error
 	var store handlers.LinksStorager
 
-	c, err := config.NewConfig()
-	if err != nil {
-		log.Fatalln(err)
-	}
+	c := config.NewConfig()
 
 	if c.ConnectionString == "" {
 		store, err = memory.NewLinkMemoryStore()

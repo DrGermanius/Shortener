@@ -3,10 +3,10 @@ package config
 import (
 	"flag"
 	"fmt"
-	"github.com/caarlos0/env/v6"
+	"os"
 )
 
-var cfg *config
+var c *config
 
 const (
 	baseURL            = "BASE_URL"
@@ -19,13 +19,6 @@ const (
 	defaultBaseURL       = "http://localhost:8080"
 )
 
-type config struct {
-	BaseURL          string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	ServerAddress    string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
-	FilePath         string `env:"FILE_STORAGE_PATH" envDefault:"./tmp"`
-	ConnectionString string `env:"DATABASE_DSN" envDefault:""`
-}
-
 const (
 	host     = "localhost"
 	port     = 5432
@@ -33,34 +26,46 @@ const (
 	password = "12345"
 )
 
-func NewConfig() (*config, error) {
-	cfg = &config{}
-	if err := env.Parse(cfg); err != nil {
-		return nil, err
-	}
+type config struct {
+	BaseURL          string
+	ServerAddress    string
+	FilePath         string
+	ConnectionString string
+}
 
-	conn := fmt.Sprintf("host=%s port=%d user=%s "+
+func NewConfig() *config {
+	c = new(config)
+
+	defaultConn := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s sslmode=disable",
 		host, port, user, password)
 
-	flag.StringVar(&cfg.ServerAddress, "h", cfg.ServerAddress, "host to listen on")
-	flag.StringVar(&cfg.BaseURL, "b", cfg.BaseURL, "baseURl for short link")
-	flag.StringVar(&cfg.FilePath, "f", cfg.FilePath, "filePath for links")
-	flag.StringVar(&cfg.ConnectionString, "d", conn, "postgres connection path")
+	flag.StringVar(&c.ServerAddress, "h", setEnvOrDefault(serverAddress, defaultServerAddress), "host to listen on")
+	flag.StringVar(&c.BaseURL, "b", setEnvOrDefault(baseURL, defaultBaseURL), "baseURl for short link")
+	flag.StringVar(&c.FilePath, "f", setEnvOrDefault(filePathEnv, defaultFilePath), "filePath for links")
+	flag.StringVar(&c.ConnectionString, "d", setEnvOrDefault(dbConnectionString, defaultConn), "postgres connection path")
 	flag.Parse()
 
-	return cfg, nil
+	return c
 }
 
-func TestConfig() (*config, error) {
-	cfg = &config{}
-	if err := env.Parse(cfg); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
+func SetTestConfig() *config {
+	c = new(config)
+	c.ServerAddress = setEnvOrDefault(serverAddress, defaultServerAddress)
+	c.BaseURL = setEnvOrDefault(baseURL, defaultBaseURL)
+	c.FilePath = setEnvOrDefault(filePathEnv, defaultFilePath)
+	c.ConnectionString = setEnvOrDefault(dbConnectionString, "")
+	return c
 }
 
 func Config() *config {
-	return cfg
+	return c
+}
+
+func setEnvOrDefault(env, def string) string {
+	res, e := os.LookupEnv(env)
+	if !e {
+		res = def
+	}
+	return res
 }
