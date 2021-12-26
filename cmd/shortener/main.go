@@ -46,6 +46,7 @@ func main() {
 
 	r.Post("/", h.AddShortLinkHandler)
 	r.Post("/api/shorten", h.ShortenHandler)
+	r.Post("/api/shorten/batch", h.BatchHandler)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, app.ErrMethodNotAllowed.Error(), http.StatusMethodNotAllowed)

@@ -24,6 +24,20 @@ func NewLinkMemoryStore() (*LinkMemoryStore, error) {
 	return &LinksMap, nil
 }
 
+func (l *LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals []models.BatchOriginal) ([]string, error) {
+	_ = ctx
+	shorts := make([]string, 0, len(originals))
+	for _, v := range originals {
+		s, err := l.Write(ctx, uid, v.OriginalURL)
+		if err != nil {
+			return nil, err
+		}
+
+		shorts = append(shorts, s)
+	}
+	return shorts, nil
+}
+
 func (l *LinkMemoryStore) Ping(ctx context.Context) bool {
 	_ = ctx
 	return true //todo

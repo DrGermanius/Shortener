@@ -15,9 +15,10 @@ import (
 
 type LinksStorager interface {
 	Get(context.Context, string) (string, error)
-	GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, error)
-	Write(ctx context.Context, uuid, long string) (string, error)
-	Ping(ctx context.Context) bool
+	GetByUserID(context.Context, string) (*[]models.LinkJSON, error)
+	Write(context.Context, string, string) (string, error)
+	BatchWrite(context.Context, string, []models.BatchOriginal) ([]string, error)
+	Ping(context.Context) bool
 }
 
 type Handlers struct {
@@ -159,6 +160,58 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 
 	sRes.Result = util.FullLink(s)
 	jRes, err := json.Marshal(sRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	_, err = w.Write(jRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
+	uid, err := checkAuthCookie(w, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	b, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	defer req.Body.Close()
+
+	var batchReq []models.BatchOriginal
+
+	err = json.Unmarshal(b, &batchReq)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	shorts, err := h.store.BatchWrite(req.Context(), uid, batchReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	batchRes := make([]models.BatchShort, 0, len(batchReq))
+	for i := 0; i < len(batchReq); i++ {
+		batchRes = append(batchRes, models.BatchShort{
+			CorrelationId: batchReq[i].CorrelationId,
+			ShortURL:      util.FullLink(shorts[i]),
+		})
+	}
+
+	jRes, err := json.Marshal(batchRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

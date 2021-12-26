@@ -20,7 +20,8 @@ const (
 		"short_link VARCHAR  		NOT NULL" +
 		");"
 
-	linkFields             = "user_id, long_link, short_link"
+	linkFields = "user_id, long_link, short_link"
+
 	insertLinkQuery        = "INSERT INTO links  (" + linkFields + ") VALUES ( $1, $2, $3 )"
 	selectByUserIDQuery    = "SELECT " + linkFields + " FROM links where user_id = $1"
 	selectByShortLinkQuery = "SELECT long_link FROM links where short_link = $1"
@@ -102,6 +103,44 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 	}
 
 	return short, nil
+}
+
+func (d *DB) BatchWrite(ctx context.Context, uid string, originals []models.BatchOriginal) ([]string, error) {
+	conn, err := d.conn.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	shorts := make([]string, 0, len(originals))
+	for _, v := range originals {
+		shorts = append(shorts, app.ShortLink([]byte(v.OriginalURL)))
+	}
+
+	tx, err := conn.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Prepare(ctx, "batch-insert", insertLinkQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, v := range originals {
+		rows, err := tx.Query(ctx, "batch-insert", uid, v.OriginalURL, shorts[i])
+		if err != nil {
+			return nil, err
+		}
+		rows.Close()
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return shorts, nil
 }
 
 func (d *DB) Ping(ctx context.Context) bool {
