@@ -3,39 +3,26 @@ package database
 import (
 	"context"
 	"errors"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/models"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/DrGermanius/Shortener/internal/app/util"
 )
 
 const (
-	checkDBExistQuery = "SELECT 1 FROM pg_catalog.pg_database WHERE datname = 'links'"
-	createDBQuery     = "CREATE DATABASE links"
-	createTableQuery  = "CREATE TABLE links (" +
-		"id    		SERIAL 			PRIMARY KEY," +
-		"user_id    VARCHAR ( 50 )  NOT NULL," +
-		"long_link  VARCHAR  		NOT NULL," +
-		"short_link VARCHAR  		NOT NULL," +
-		"UNIQUE(long_link)" +
-		");"
-
-	linkFields = "user_id, long_link, short_link"
-
-	insertLinkQuery        = "INSERT INTO links  (" + linkFields + ") VALUES ( $1, $2, $3 )"
-	selectByUserIDQuery    = "SELECT " + linkFields + " FROM links where user_id = $1"
-	selectByShortLinkQuery = "SELECT long_link FROM links where short_link = $1"
+	linkFields      = "user_id, long_link, short_link"
+	insertLinkQuery = "INSERT INTO links  (" + linkFields + ") VALUES ( $1, $2, $3 )"
 )
 
 type DB struct {
 	conn *pgxpool.Pool
 }
 
-func NewDatabaseStorage(connString string) (*DB, error) {
+func NewDatabaseStore(connString string) (*DB, error) {
 	conn, err := pgxpool.Connect(context.Background(), connString)
 	if err != nil {
 		return nil, err
@@ -52,7 +39,7 @@ func NewDatabaseStorage(connString string) (*DB, error) {
 func (d *DB) Get(ctx context.Context, short string) (string, error) {
 	var long string
 
-	row := d.conn.QueryRow(ctx, selectByShortLinkQuery, short)
+	row := d.conn.QueryRow(ctx, "SELECT long_link FROM links where short_link = $1", short)
 
 	err := row.Scan(&long)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -65,10 +52,10 @@ func (d *DB) Get(ctx context.Context, short string) (string, error) {
 	return long, nil
 }
 
-func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, error) {
+func (d *DB) GetByUserID(ctx context.Context, id string) ([]models.LinkJSON, error) {
 	var links []models.LinkJSON
 
-	rows, err := d.conn.Query(ctx, selectByUserIDQuery, id)
+	rows, err := d.conn.Query(ctx, "SELECT "+linkFields+" FROM links where user_id = $1", id)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +82,7 @@ func (d *DB) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, er
 		return nil, app.ErrUserHasNoRecords
 	}
 
-	return &links, nil
+	return links, nil
 }
 
 func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
@@ -157,18 +144,24 @@ func (d *DB) Ping(ctx context.Context) bool {
 }
 
 func createDatabaseAndTable(c *pgxpool.Pool) error {
-	rows, err := c.Query(context.Background(), checkDBExistQuery)
+	rows, err := c.Query(context.Background(), "SELECT 1 FROM pg_catalog.pg_database WHERE datname = 'links'")
 	if err != nil {
 		return err
 	}
 
 	if !rows.Next() {
-		_, err = c.Exec(context.Background(), createDBQuery)
+		_, err = c.Exec(context.Background(), "CREATE DATABASE links")
 		if err != nil {
 			return err
 		}
 
-		_, err = c.Exec(context.Background(), createTableQuery)
+		_, err = c.Exec(context.Background(), "CREATE TABLE links ("+
+			"id    		SERIAL 			PRIMARY KEY,"+
+			"user_id    VARCHAR ( 50 )  NOT NULL,"+
+			"long_link  VARCHAR  		NOT NULL,"+
+			"short_link VARCHAR  		NOT NULL,"+
+			"UNIQUE(long_link)"+
+			");")
 		if err != nil {
 			return err
 		}

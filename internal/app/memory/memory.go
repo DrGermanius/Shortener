@@ -52,7 +52,7 @@ func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
 	return long.Long, nil
 }
 
-func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) (*[]models.LinkJSON, error) {
+func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) ([]models.LinkJSON, error) {
 	_ = ctx
 	var res []models.LinkJSON
 	for k, v := range *l {
@@ -65,7 +65,7 @@ func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) (*[]models
 		return nil, app.ErrUserHasNoRecords
 	}
 
-	return &res, nil
+	return res, nil
 }
 
 func (l *LinkMemoryStore) Write(ctx context.Context, uuid, long string) (string, error) {

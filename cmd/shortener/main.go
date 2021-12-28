@@ -26,7 +26,7 @@ func main() {
 		}
 		log.Println("Service uses inmemory storage")
 	} else {
-		store, err = database.NewDatabaseStorage(c.ConnectionString)
+		store, err = database.NewDatabaseStore(c.ConnectionString)
 		if err != nil {
 			log.Fatalln(err)
 		}

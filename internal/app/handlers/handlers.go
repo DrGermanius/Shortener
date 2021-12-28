@@ -4,19 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/DrGermanius/Shortener/internal/app"
+	"github.com/DrGermanius/Shortener/internal/app/auth"
+	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/util"
 	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/DrGermanius/Shortener/internal/app"
-	"github.com/DrGermanius/Shortener/internal/app/auth"
-	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
 type LinksStorager interface {
 	Get(context.Context, string) (string, error)
-	GetByUserID(context.Context, string) (*[]models.LinkJSON, error)
+	GetByUserID(context.Context, string) ([]models.LinkJSON, error)
 	Write(context.Context, string, string) (string, error)
 	BatchWrite(context.Context, string, []models.BatchOriginal) ([]string, error)
 	Ping(context.Context) bool
