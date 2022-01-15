@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/util"
-	"io/ioutil"
-	"log"
-	"net/http"
 )
 
 type LinksStorager interface {
@@ -18,6 +20,7 @@ type LinksStorager interface {
 	GetByUserID(context.Context, string) ([]models.LinkJSON, error)
 	Write(context.Context, string, string) (string, error)
 	BatchWrite(context.Context, string, []models.BatchOriginal) ([]string, error)
+	BatchDelete(ctx context.Context, uid string, links []string) error
 	Ping(context.Context) bool
 }
 
@@ -40,7 +43,12 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 
 	l, err := h.store.Get(req.Context(), s)
 	if err != nil {
+		if errors.Is(err, app.ErrDeletedLink) {
+			http.Error(w, err.Error(), http.StatusGone)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return // todo его не было
 	}
 
 	w.Header().Add("Location", l)
@@ -240,6 +248,43 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	_, err = w.Write(jRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+func (h *Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
+	uid, err := checkAuthCookie(w, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	b, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	defer req.Body.Close()
+
+	var links []string
+	err = json.Unmarshal(b, &links)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+	ctx := context.Background()
+	go func() {
+		err := h.store.BatchDelete(ctx, uid, links)
+		if err != nil {
+			log.Print(fmt.Errorf("batch delete error: %w", err))
+		}
+	}()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+
+	_, err = w.Write([]byte{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}

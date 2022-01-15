@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
@@ -38,15 +39,20 @@ func NewDatabaseStore(connString string) (*DB, error) {
 
 func (d *DB) Get(ctx context.Context, short string) (string, error) {
 	var long string
+	var isDel bool
 
-	row := d.conn.QueryRow(ctx, "SELECT long_link FROM links where short_link = $1", short)
+	row := d.conn.QueryRow(ctx, "SELECT long_link, is_deleted FROM links where short_link = $1", short)
 
-	err := row.Scan(&long)
+	err := row.Scan(&long, &isDel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", app.ErrLinkNotFound
 	}
 	if err != nil {
 		return "", err
+	}
+
+	if isDel {
+		return "", app.ErrDeletedLink
 	}
 
 	return long, nil
@@ -99,6 +105,15 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 	}
 
 	return short, nil
+}
+
+func (d *DB) BatchDelete(ctx context.Context, uid string, links []string) error {
+	_, err := d.conn.Exec(ctx, "UPDATE links SET is_deleted = true WHERE user_id = $1 AND short_link = any($2)", uid, links)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *DB) BatchWrite(ctx context.Context, uid string, originals []models.BatchOriginal) ([]string, error) {
@@ -160,6 +175,7 @@ func createDatabaseAndTable(c *pgxpool.Pool) error {
 			"user_id    VARCHAR ( 50 )  NOT NULL,"+
 			"long_link  VARCHAR  		NOT NULL,"+
 			"short_link VARCHAR  		NOT NULL,"+
+			"is_deleted bool DEFAULT false  	NOT NULL,"+
 			"UNIQUE(long_link)"+
 			");")
 		if err != nil {

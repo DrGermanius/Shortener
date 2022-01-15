@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"os"
+
+	"github.com/DrGermanius/Shortener/internal/app/util"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
@@ -40,7 +41,21 @@ func (l *LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals 
 
 func (l *LinkMemoryStore) Ping(ctx context.Context) bool {
 	_ = ctx
-	return true //todo
+	return true
+}
+
+func (l *LinkMemoryStore) BatchDelete(ctx context.Context, uid string, links []string) error {
+	_ = ctx
+
+	for _, link := range links {
+		if (*l)[link].UUID == uid {
+			updatedLink := (*l)[link]
+			updatedLink.IsDeleted = true
+
+			(*l)[link] = updatedLink
+		}
+	}
+	return nil
 }
 
 func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
@@ -71,7 +86,7 @@ func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) ([]models.
 func (l *LinkMemoryStore) Write(ctx context.Context, uuid, long string) (string, error) {
 	_ = ctx
 	s := app.ShortLink([]byte(long))
-	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid}
+	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid, IsDeleted: false}
 
 	err := writeFile(uuid, s, long)
 	if err != nil {
@@ -98,7 +113,7 @@ func (l *LinkMemoryStore) readFile() error {
 			return err
 		}
 
-		(*l)[link.Short] = models.LinkInfo{Long: link.Long, UUID: link.UUID}
+		(*l)[link.Short] = models.LinkInfo{Long: link.Long, UUID: link.UUID, IsDeleted: link.IsDeleted}
 	}
 	return nil
 }
@@ -114,9 +129,10 @@ func Clear() error {
 
 func writeFile(uuid, short, long string) error {
 	m := models.LinkJSON{
-		UUID:  uuid,
-		Short: short,
-		Long:  long,
+		UUID:      uuid,
+		Short:     short,
+		Long:      long,
+		IsDeleted: false,
 	}
 
 	p := config.Config().FilePath

@@ -1,16 +1,18 @@
 package main
 
 import (
+	"log"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/database"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
 	"github.com/DrGermanius/Shortener/internal/app/memory"
 	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"log"
-	"net/http"
 )
 
 func main() {
@@ -47,6 +49,8 @@ func main() {
 	r.Post("/", h.AddShortLinkHandler)
 	r.Post("/api/shorten", h.ShortenHandler)
 	r.Post("/api/shorten/batch", h.BatchHandler)
+
+	r.Delete("/api/user/urls", h.DeleteLinksHandler)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, app.ErrMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
