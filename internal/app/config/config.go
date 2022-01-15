@@ -2,81 +2,70 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 )
 
 var c *config
 
 const (
-	baseURL       = "BASE_URL"
-	serverAddress = "SERVER_ADDRESS"
-	filePathEnv   = "FILE_STORAGE_PATH"
+	baseURL            = "BASE_URL"
+	serverAddress      = "SERVER_ADDRESS"
+	filePathEnv        = "FILE_STORAGE_PATH"
+	dbConnectionString = "DATABASE_DSN"
 
 	defaultFilePath      = "./tmp"
 	defaultServerAddress = "localhost:8080"
 	defaultBaseURL       = "http://localhost:8080"
 )
 
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "12345"
+)
+
 type config struct {
-	BaseURL       string
-	ServerAddress string
-	FilePath      string
+	BaseURL          string
+	ServerAddress    string
+	FilePath         string
+	ConnectionString string
 }
 
 func NewConfig() *config {
 	c = new(config)
 
-	a, e := os.LookupEnv(serverAddress)
-	if !e {
-		a = defaultServerAddress
-	}
-	flag.StringVar(&a, "h", a, "host to listen on")
+	defaultConn := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s sslmode=disable",
+		host, port, user, password)
 
-	b, e := os.LookupEnv(baseURL)
-	if !e {
-		b = defaultBaseURL
-	}
-	flag.StringVar(&b, "b", b, "baseURl for short link")
-
-	f, e := os.LookupEnv(filePathEnv)
-	if !e {
-		f = defaultFilePath
-	}
-	flag.StringVar(&f, "f", f, "filePath for links")
+	flag.StringVar(&c.ServerAddress, "h", setEnvOrDefault(serverAddress, defaultServerAddress), "host to listen on")
+	flag.StringVar(&c.BaseURL, "b", setEnvOrDefault(baseURL, defaultBaseURL), "baseURl for short link")
+	flag.StringVar(&c.FilePath, "f", setEnvOrDefault(filePathEnv, defaultFilePath), "filePath for links")
+	flag.StringVar(&c.ConnectionString, "d", setEnvOrDefault(dbConnectionString, defaultConn), "postgres connection path")
 	flag.Parse()
-
-	c.ServerAddress = a
-	c.BaseURL = b
-	c.FilePath = f
 
 	return c
 }
 
-func Suite() *config { //todo rewrite after lesson about TestSuite
+func SetTestConfig() *config {
 	c = new(config)
-
-	a, e := os.LookupEnv(serverAddress)
-	if !e {
-		a = defaultServerAddress
-	}
-
-	b, e := os.LookupEnv(baseURL)
-	if !e {
-		b = defaultBaseURL
-	}
-
-	f, e := os.LookupEnv(filePathEnv)
-	if !e {
-		f = defaultFilePath
-	}
-
-	c.ServerAddress = a
-	c.BaseURL = b
-	c.FilePath = f
-
+	c.ServerAddress = setEnvOrDefault(serverAddress, defaultServerAddress)
+	c.BaseURL = setEnvOrDefault(baseURL, defaultBaseURL)
+	c.FilePath = setEnvOrDefault(filePathEnv, defaultFilePath)
+	c.ConnectionString = setEnvOrDefault(dbConnectionString, "")
 	return c
 }
 
 func Config() *config {
 	return c
+}
+
+func setEnvOrDefault(env, def string) string {
+	res, e := os.LookupEnv(env)
+	if !e {
+		res = def
+	}
+	return res
 }
