@@ -13,12 +13,12 @@ const (
 	serverAddress      = "SERVER_ADDRESS"
 	filePathEnv        = "FILE_STORAGE_PATH"
 	dbConnectionString = "DATABASE_DSN"
-	authSecret         = "AUTH_SECRET"
+	authKey            = "AUTH_KEY"
 
 	defaultFilePath      = "./tmp"
 	defaultServerAddress = "localhost:8080"
 	defaultBaseURL       = "http://localhost:8080"
-	defaultAuthSecret    = "secret"
+	defaultAuthKey       = "secret"
 )
 
 const (
@@ -43,7 +43,7 @@ func NewConfig() *config {
 		"password=%s sslmode=disable",
 		host, port, user, password)
 
-	c.AuthKey = setEnvOrDefault(authSecret, defaultAuthSecret)
+	c.AuthKey = setEnvOrDefault(authKey, defaultAuthKey)
 	flag.StringVar(&c.ServerAddress, "h", setEnvOrDefault(serverAddress, defaultServerAddress), "host to listen on")
 	flag.StringVar(&c.BaseURL, "b", setEnvOrDefault(baseURL, defaultBaseURL), "baseURl for short link")
 	flag.StringVar(&c.FilePath, "f", setEnvOrDefault(filePathEnv, defaultFilePath), "filePath for links")
