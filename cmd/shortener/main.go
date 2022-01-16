@@ -9,33 +9,22 @@ import (
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
-	"github.com/DrGermanius/Shortener/internal/app/database"
 	"github.com/DrGermanius/Shortener/internal/app/handlers"
-	"github.com/DrGermanius/Shortener/internal/app/memory"
 	ml "github.com/DrGermanius/Shortener/internal/app/middlewares"
+	"github.com/DrGermanius/Shortener/internal/store"
 )
 
 func main() {
 	var err error
-	var store handlers.LinksStorager
 
 	c := config.NewConfig()
 
-	if c.ConnectionString == "" {
-		store, err = memory.NewLinkMemoryStore()
-		if err != nil {
-			log.Fatalln(err)
-		}
-		log.Println("Service uses inmemory storage")
-	} else {
-		store, err = database.NewDatabaseStore(c.ConnectionString)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		log.Println("Service uses database")
+	storager, err := store.New(c.ConnectionString)
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	h := handlers.NewHandlers(store)
+	h := handlers.NewHandlers(storager)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

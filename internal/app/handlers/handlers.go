@@ -13,22 +13,14 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/app/util"
+	"github.com/DrGermanius/Shortener/internal/store"
 )
 
-type LinksStorager interface {
-	Get(context.Context, string) (string, error)
-	GetByUserID(context.Context, string) ([]models.LinkJSON, error)
-	Write(context.Context, string, string) (string, error)
-	BatchWrite(context.Context, string, []models.BatchOriginal) ([]string, error)
-	BatchDelete(ctx context.Context, uid string, links []string) error
-	Ping(context.Context) bool
-}
-
 type Handlers struct {
-	store LinksStorager
+	store store.LinksStorager
 }
 
-func NewHandlers(store LinksStorager) *Handlers {
+func NewHandlers(store store.LinksStorager) *Handlers {
 	return &Handlers{store: store}
 }
 

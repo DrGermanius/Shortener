@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"io"
 	"log"
 	"net/http"
@@ -12,13 +11,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DrGermanius/Shortener/internal/app/util"
+	"github.com/DrGermanius/Shortener/internal/store/memory"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/config"
-	"github.com/DrGermanius/Shortener/internal/app/memory"
 	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
