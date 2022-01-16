@@ -389,7 +389,7 @@ func TestDeleteLinks(t *testing.T) {
 
 			res := w.Result()
 			require.Equal(t, tt.want.code, res.StatusCode)
-
+			res.Body.Close()
 			time.Sleep(time.Second * 2)
 			request = httptest.NewRequest(http.MethodGet, "/"+link, nil)
 			request.AddCookie(authCookie)
@@ -399,6 +399,7 @@ func TestDeleteLinks(t *testing.T) {
 			h.ServeHTTP(w, request)
 
 			res = w.Result()
+			defer res.Body.Close()
 			require.Equal(t, http.StatusGone, res.StatusCode)
 		})
 	}
