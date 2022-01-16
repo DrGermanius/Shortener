@@ -297,12 +297,12 @@ func checkAuthCookie(w http.ResponseWriter, req *http.Request) (string, error) {
 			return "", err
 		}
 		http.SetCookie(w, &http.Cookie{Name: auth.AuthCookie, Value: signaturedUUID})
+		return uid, nil
+	}
 
-	} else {
-		uid, err = auth.CheckSignature(authCookie.Value)
-		if err != nil {
-			return "", err
-		}
+	uid, err = auth.CheckSignature(authCookie.Value)
+	if err != nil {
+		return "", err
 	}
 	return uid, nil
 }
