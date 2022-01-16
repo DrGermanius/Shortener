@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"go.uber.org/zap"
+
 	"github.com/DrGermanius/Shortener/internal/app/util"
 	"github.com/DrGermanius/Shortener/internal/store/memory"
 
@@ -344,21 +346,28 @@ func TestButchLinks(t *testing.T) {
 func initTestData() {
 	config.SetTestConfig()
 
+	zapl, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	defer zapl.Sync()
+	logger := zapl.Sugar()
+
 	linksMemoryStore, err := memory.NewLinkMemoryStore()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalf("tests init error: %v", err)
 	}
 
-	H = *NewHandlers(linksMemoryStore)
+	H = *NewHandlers(linksMemoryStore, logger)
 
 	err = memory.Clear()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalf("tests init error: %v", err)
 	}
 
 	_, err = linksMemoryStore.Write(context.Background(), "", gitLink)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalf("tests init error: %v", err)
 	}
 }
 

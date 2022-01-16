@@ -2,7 +2,8 @@ package store
 
 import (
 	"context"
-	"log"
+
+	"go.uber.org/zap"
 
 	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/store/database"
@@ -18,7 +19,7 @@ type LinksStorager interface {
 	Ping(context.Context) bool
 }
 
-func New(connectionString string) (LinksStorager, error) {
+func New(connectionString string, logger *zap.SugaredLogger) (LinksStorager, error) {
 	var err error
 	var s LinksStorager
 
@@ -28,13 +29,13 @@ func New(connectionString string) (LinksStorager, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Println("Service uses inmemory storage")
+		logger.Info("Service uses inmemory storage")
 	default:
 		s, err = database.NewDatabaseStore(connectionString)
 		if err != nil {
 			return nil, err
 		}
-		log.Println("Service uses database")
+		logger.Info("Service uses database")
 	}
 	return s, nil
 }

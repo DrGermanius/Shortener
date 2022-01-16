@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
@@ -17,11 +17,12 @@ import (
 )
 
 type Handlers struct {
-	store store.LinksStorager
+	store  store.LinksStorager
+	logger *zap.SugaredLogger
 }
 
-func NewHandlers(store store.LinksStorager) *Handlers {
-	return &Handlers{store: store}
+func NewHandlers(store store.LinksStorager, logger *zap.SugaredLogger) *Handlers {
+	return &Handlers{store: store, logger: logger}
 }
 
 func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
@@ -48,7 +49,7 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 
 	_, err = w.Write([]byte{})
 	if err != nil {
-		log.Print(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -270,7 +271,7 @@ func (h *Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) 
 	go func() {
 		err := h.store.BatchDelete(ctx, uid, links)
 		if err != nil {
-			log.Print(fmt.Errorf("batch delete error: %w", err))
+			h.logger.Errorf("batch delete error: %v", err)
 		}
 	}()
 	w.Header().Set("Content-Type", "application/json")

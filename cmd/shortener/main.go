@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
@@ -16,15 +17,20 @@ import (
 
 func main() {
 	var err error
-
 	c := config.NewConfig()
-
-	storager, err := store.New(c.ConnectionString)
+	zapl, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	defer zapl.Sync()
+	logger := zapl.Sugar()
+
+	storager, err := store.New(c.ConnectionString, logger)
+	if err != nil {
+		logger.Fatalf("can't initialize store: %v", err)
 	}
 
-	h := handlers.NewHandlers(storager)
+	h := handlers.NewHandlers(storager, logger)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -45,6 +51,6 @@ func main() {
 		http.Error(w, app.ErrMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
 	})
 
-	log.Println("API started on " + c.ServerAddress)
-	log.Fatalln(http.ListenAndServe(c.ServerAddress, r))
+	logger.Infof("API started on %s", c.ServerAddress)
+	logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
 }
