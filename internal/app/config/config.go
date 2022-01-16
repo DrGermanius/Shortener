@@ -55,6 +55,7 @@ func NewConfig() *config {
 
 func SetTestConfig() *config {
 	c = new(config)
+	c.AuthKey = setEnvOrDefault(authKey, defaultAuthKey)
 	c.ServerAddress = setEnvOrDefault(serverAddress, defaultServerAddress)
 	c.BaseURL = setEnvOrDefault(baseURL, defaultBaseURL)
 	c.FilePath = setEnvOrDefault(filePathEnv, defaultFilePath)
