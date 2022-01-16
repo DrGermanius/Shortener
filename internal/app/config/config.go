@@ -31,10 +31,12 @@ type config struct {
 	ServerAddress    string
 	FilePath         string
 	ConnectionString string
+	AuthKey          string
 }
 
 func NewConfig() *config {
 	c = new(config)
+	c.AuthKey = "secret"
 
 	defaultConn := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s sslmode=disable",
