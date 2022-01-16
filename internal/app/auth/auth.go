@@ -13,8 +13,6 @@ import (
 
 const AuthCookie = "UserID"
 
-var key = []byte(config.Config().AuthKey)
-
 func CheckSignature(s string) (string, error) {
 	if len(s) < 36 {
 		return "", app.ErrInvalidSignature
@@ -48,6 +46,7 @@ func GetSignature() (string, error) {
 }
 
 func calculateSignature(b []byte) ([]byte, error) {
+	key := []byte(config.Config().AuthKey)
 	h := hmac.New(md5.New, key)
 	_, err := h.Write(b)
 	if err != nil {
