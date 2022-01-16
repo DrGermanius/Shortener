@@ -64,6 +64,10 @@ func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
 	if !exist {
 		return "", app.ErrLinkNotFound
 	}
+
+	if long.IsDeleted {
+		return "", app.ErrDeletedLink
+	}
 	return long.Long, nil
 }
 

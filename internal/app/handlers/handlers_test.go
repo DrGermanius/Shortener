@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -339,6 +340,66 @@ func TestButchLinks(t *testing.T) {
 
 			require.Equal(t, tt.want.code, res.StatusCode)
 			require.Equal(t, expectedRes, actualRes)
+		})
+	}
+}
+
+func TestDeleteLinks(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			link:   yandexLink,
+			name:   "positive test #9",
+			method: http.MethodDelete,
+			want: want{
+				code: http.StatusAccepted,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+		t.Run(tt.name, func(t *testing.T) {
+			authCookieValue, err := auth.GetSignature()
+			require.NoError(t, err)
+			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: authCookieValue}
+
+			request := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.link))
+			request.AddCookie(authCookie)
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(H.AddShortLinkHandler)
+			h.ServeHTTP(w, request)
+
+			link := app.ShortLink([]byte(yandexLink))
+			req, err := json.Marshal([]string{
+				link,
+			})
+			require.NoError(t, err)
+
+			request = httptest.NewRequest(tt.method, "/api/user/urls", bytes.NewBuffer(req))
+			request.AddCookie(authCookie)
+
+			w = httptest.NewRecorder()
+			h = H.DeleteLinksHandler
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+			require.Equal(t, tt.want.code, res.StatusCode)
+
+			time.Sleep(time.Second * 2)
+			request = httptest.NewRequest(http.MethodGet, "/"+link, nil)
+			request.AddCookie(authCookie)
+
+			w = httptest.NewRecorder()
+			h = H.GetShortLinkHandler
+			h.ServeHTTP(w, request)
+
+			res = w.Result()
+			require.Equal(t, http.StatusGone, res.StatusCode)
 		})
 	}
 }
