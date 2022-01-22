@@ -28,7 +28,6 @@ import (
 const (
 	gitLink    = "https://github.com"
 	yandexLink = "https://yandex.ru"
-	testUUID   = "397ff9fe-607c-4180-a2fb-20819476e2ae"
 )
 
 var H Handlers
@@ -66,7 +65,6 @@ func TestPostHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.link))
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(H.AddShortLinkHandler)
 			h.ServeHTTP(w, request)
@@ -123,7 +121,6 @@ func TestGetHandler(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(tt.method, "/"+tt.shortLink, nil)
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
 
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(H.GetShortLinkHandler)
@@ -173,7 +170,6 @@ func TestShortenHandler(t *testing.T) {
 			require.NoError(t, err)
 
 			request := httptest.NewRequest(tt.method, "/api/shorten", bytes.NewBuffer(body))
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
 
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(H.ShortenHandler)
@@ -195,6 +191,51 @@ func TestShortenHandler(t *testing.T) {
 
 			require.Equal(t, sRes.Result, tt.shortLink)
 			assert.Equal(t, res.Header.Get("Content-Type"), "application/json")
+
+		})
+	}
+}
+
+func TestGetUserUrls(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			name:   "negative test #6",
+			method: http.MethodGet,
+			want: want{
+				code: http.StatusInternalServerError,
+				err:  app.ErrInvalidSignature,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(tt.method, "/user/urls", nil)
+			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: "123"}
+			request.AddCookie(authCookie)
+
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(H.GetUserUrlsHandler)
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			if tt.want.err != nil {
+				assert.Equal(t, tt.want.code, res.StatusCode)
+				require.Error(t, tt.want.err)
+				return
+			}
+
+			require.Equal(t, tt.want.code, res.StatusCode)
+			require.Equal(t, res.Header.Get("Location"), tt.link)
 
 		})
 	}
@@ -223,8 +264,6 @@ func TestGetUserUrlsWithFakeCookie(t *testing.T) {
 			authCookieValue, err := auth.GetSignature()
 			require.NoError(t, err)
 			request := httptest.NewRequest(tt.method, "/user/urls", nil)
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
-
 			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: authCookieValue}
 			request.AddCookie(authCookie)
 
@@ -284,7 +323,6 @@ func TestButchLinks(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(tt.method, "/user/urls", bytes.NewBuffer(req))
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
 
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(H.BatchHandler)
@@ -330,8 +368,6 @@ func TestDeleteLinks(t *testing.T) {
 			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: authCookieValue}
 
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.link))
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
-
 			request.AddCookie(authCookie)
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(H.AddShortLinkHandler)
@@ -344,7 +380,7 @@ func TestDeleteLinks(t *testing.T) {
 			require.NoError(t, err)
 
 			request = httptest.NewRequest(tt.method, "/api/user/urls", bytes.NewBuffer(req))
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
+			request.AddCookie(authCookie)
 
 			w = httptest.NewRecorder()
 			h = H.DeleteLinksHandler
@@ -355,7 +391,7 @@ func TestDeleteLinks(t *testing.T) {
 			res.Body.Close()
 			time.Sleep(time.Second * 2)
 			request = httptest.NewRequest(http.MethodGet, "/"+link, nil)
-			request = request.WithContext(context.WithValue(request.Context(), "uid", testUUID))
+			request.AddCookie(authCookie)
 
 			w = httptest.NewRecorder()
 			h = H.GetShortLinkHandler

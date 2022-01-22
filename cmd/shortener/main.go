@@ -36,7 +36,6 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Compress(5))
 	r.Use(ml.GzipDecompress)
-	r.Use(ml.CheckAuthCookie)
 
 	r.Get("/{id}", h.GetShortLinkHandler)
 	r.Get("/user/urls", h.GetUserUrlsHandler)
