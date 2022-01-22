@@ -15,7 +15,7 @@ type LinksStorager interface {
 	GetByUserID(context.Context, string) ([]models.LinkJSON, error)
 	Write(context.Context, string, string) (string, error)
 	BatchWrite(context.Context, string, []models.BatchOriginal) ([]string, error)
-	BatchDelete(ctx context.Context, uid string, links []string) error
+	Delete(ctx context.Context, uid string, links string) error
 	Ping(context.Context) bool
 }
 

@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/DrGermanius/Shortener/internal/app/util"
-
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
 	"github.com/DrGermanius/Shortener/internal/app/models"
@@ -26,7 +24,6 @@ func NewLinkMemoryStore() (*LinkMemoryStore, error) {
 }
 
 func (l *LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals []models.BatchOriginal) ([]string, error) {
-	_ = ctx
 	shorts := make([]string, 0, len(originals))
 	for _, v := range originals {
 		s, err := l.Write(ctx, uid, v.OriginalURL)
@@ -39,27 +36,20 @@ func (l *LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals 
 	return shorts, nil
 }
 
-func (l *LinkMemoryStore) Ping(ctx context.Context) bool {
-	_ = ctx
+func (l *LinkMemoryStore) Ping(_ context.Context) bool {
 	return true
 }
 
-func (l *LinkMemoryStore) BatchDelete(ctx context.Context, uid string, links []string) error {
-	_ = ctx
-
-	for _, link := range links {
-		if (*l)[link].UUID == uid {
-			updatedLink := (*l)[link]
-			updatedLink.IsDeleted = true
-
-			(*l)[link] = updatedLink
-		}
+func (l *LinkMemoryStore) Delete(_ context.Context, uid string, link string) error {
+	if (*l)[link].UUID == uid {
+		updatedLink := (*l)[link]
+		updatedLink.IsDeleted = true
+		(*l)[link] = updatedLink
 	}
 	return nil
 }
 
-func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
-	_ = ctx
+func (l *LinkMemoryStore) Get(_ context.Context, s string) (string, error) {
 	long, exist := (*l)[s]
 	if !exist {
 		return "", app.ErrLinkNotFound
@@ -71,12 +61,11 @@ func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
 	return long.Long, nil
 }
 
-func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) ([]models.LinkJSON, error) {
-	_ = ctx
+func (l *LinkMemoryStore) GetByUserID(_ context.Context, id string) ([]models.LinkJSON, error) {
 	var res []models.LinkJSON
 	for k, v := range *l {
 		if v.UUID == id {
-			res = append(res, models.LinkJSON{Long: v.Long, Short: util.FullLink(k)})
+			res = append(res, models.LinkJSON{Long: v.Long, Short: app.FullLink(k)})
 		}
 	}
 
@@ -87,8 +76,7 @@ func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) ([]models.
 	return res, nil
 }
 
-func (l *LinkMemoryStore) Write(ctx context.Context, uuid, long string) (string, error) {
-	_ = ctx
+func (l *LinkMemoryStore) Write(_ context.Context, uuid, long string) (string, error) {
 	s := app.ShortLink([]byte(long))
 	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid, IsDeleted: false}
 

@@ -11,7 +11,6 @@ import (
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/models"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 )
 
 const (
@@ -70,7 +69,7 @@ func (d *DB) GetByUserID(ctx context.Context, id string) ([]models.LinkJSON, err
 	for rows.Next() {
 		var l models.LinkJSON
 		err = rows.Scan(&l.UUID, &l.Long, &l.Short)
-		l.Short = util.FullLink(l.Short)
+		l.Short = app.FullLink(l.Short)
 
 		if err != nil {
 			return nil, err
@@ -107,8 +106,10 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 	return short, nil
 }
 
-func (d *DB) BatchDelete(ctx context.Context, uid string, links []string) error {
-	_, err := d.conn.Exec(ctx, "UPDATE links SET is_deleted = true WHERE user_id = $1 AND short_link = any($2)", uid, links)
+func (d *DB) Delete(ctx context.Context, uid string, link string) error {
+	//_, err := d.conn.Exec(ctx, "UPDATE links SET is_deleted = true WHERE user_id = $1 AND short_link = any($2)", uid, link)
+
+	_, err := d.conn.Exec(ctx, "UPDATE links SET is_deleted = true WHERE user_id = $1 AND short_link = $2", uid, link)
 	if err != nil {
 		return err
 	}

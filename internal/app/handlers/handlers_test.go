@@ -14,7 +14,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"github.com/DrGermanius/Shortener/internal/store/memory"
 
 	"github.com/stretchr/testify/assert"
@@ -318,9 +317,9 @@ func TestButchLinks(t *testing.T) {
 
 			expectedRes := []models.BatchShort{
 				{CorrelationID: "1",
-					ShortURL: util.FullLink(app.ShortLink([]byte(gitLink)))},
+					ShortURL: app.FullLink(app.ShortLink([]byte(gitLink)))},
 				{CorrelationID: "2",
-					ShortURL: util.FullLink(app.ShortLink([]byte(yandexLink)))},
+					ShortURL: app.FullLink(app.ShortLink([]byte(yandexLink)))},
 			}
 
 			request := httptest.NewRequest(tt.method, "/user/urls", bytes.NewBuffer(req))

@@ -12,7 +12,6 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/models"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"github.com/DrGermanius/Shortener/internal/store"
 )
 
@@ -125,7 +124,7 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 			return
 		}
 	}
-	full := util.FullLink(s)
+	full := app.FullLink(s)
 
 	if linkAlreadyExist {
 		w.WriteHeader(http.StatusConflict)
@@ -147,12 +146,11 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
 	if err != nil {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-
-	defer req.Body.Close()
 
 	sReq := models.ShortenRequest{}
 	sRes := models.ShortenResponse{}
@@ -174,7 +172,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	sRes.Result = util.FullLink(s)
+	sRes.Result = app.FullLink(s)
 	jRes, err := json.Marshal(sRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -202,12 +200,11 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
 	if err != nil {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-
-	defer req.Body.Close()
 
 	var batchReq []models.BatchOriginal
 
@@ -227,7 +224,7 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	for i := 0; i < len(batchReq); i++ {
 		batchRes = append(batchRes, models.BatchShort{
 			CorrelationID: batchReq[i].CorrelationID,
-			ShortURL:      util.FullLink(shorts[i]),
+			ShortURL:      app.FullLink(shorts[i]),
 		})
 	}
 
@@ -254,12 +251,11 @@ func (h *Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) 
 	}
 
 	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
 	if err != nil {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-
-	defer req.Body.Close()
 
 	var links []string
 	err = json.Unmarshal(b, &links)
@@ -268,12 +264,10 @@ func (h *Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	ctx := context.Background()
-	go func() {
-		err := h.store.BatchDelete(ctx, uid, links)
-		if err != nil {
-			h.logger.Errorf("batch delete error: %v", err)
-		}
-	}()
+
+	wp := app.NewDeleteWorkerPool(ctx, uid, links, h.store.Delete, h.logger)
+	go wp.Run()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 
