@@ -40,7 +40,7 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return // todo его не было
+		return
 	}
 
 	w.Header().Add("Location", l)

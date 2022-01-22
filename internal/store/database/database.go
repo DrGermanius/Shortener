@@ -107,8 +107,6 @@ func (d *DB) Write(ctx context.Context, uuid, long string) (string, error) {
 }
 
 func (d *DB) Delete(ctx context.Context, uid string, link string) error {
-	//_, err := d.conn.Exec(ctx, "UPDATE links SET is_deleted = true WHERE user_id = $1 AND short_link = any($2)", uid, link)
-
 	_, err := d.conn.Exec(ctx, "UPDATE links SET is_deleted = true WHERE user_id = $1 AND short_link = $2", uid, link)
 	if err != nil {
 		return err
