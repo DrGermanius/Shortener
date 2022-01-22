@@ -14,11 +14,13 @@ const (
 	filePathEnv        = "FILE_STORAGE_PATH"
 	dbConnectionString = "DATABASE_DSN"
 	authKey            = "AUTH_KEY"
+	workersCount       = "WORKERS_COUNT"
 
 	defaultFilePath      = "./tmp"
 	defaultServerAddress = "localhost:8080"
 	defaultBaseURL       = "http://localhost:8080"
 	defaultAuthKey       = "secret"
+	defaultWorkersCount  = "10"
 )
 
 const (
@@ -34,6 +36,7 @@ type config struct {
 	FilePath         string
 	ConnectionString string
 	AuthKey          string
+	WorkersCount     string
 }
 
 func NewConfig() *config {
@@ -44,6 +47,7 @@ func NewConfig() *config {
 		host, port, user, password)
 
 	c.AuthKey = setEnvOrDefault(authKey, defaultAuthKey)
+	c.WorkersCount = setEnvOrDefault(workersCount, defaultWorkersCount)
 	flag.StringVar(&c.ServerAddress, "h", setEnvOrDefault(serverAddress, defaultServerAddress), "host to listen on")
 	flag.StringVar(&c.BaseURL, "b", setEnvOrDefault(baseURL, defaultBaseURL), "baseURl for short link")
 	flag.StringVar(&c.FilePath, "f", setEnvOrDefault(filePathEnv, defaultFilePath), "filePath for links")

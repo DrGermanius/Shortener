@@ -2,9 +2,12 @@ package app
 
 import (
 	"context"
+	"strconv"
 	"sync"
 
 	"go.uber.org/zap"
+
+	"github.com/DrGermanius/Shortener/internal/app/config"
 )
 
 type DeleteWorkerPool struct {
@@ -19,8 +22,13 @@ type DeleteWorkerPool struct {
 }
 
 func NewDeleteWorkerPool(context context.Context, uid string, links []string, deleteFunc func(context.Context, string, string) error, logger *zap.SugaredLogger) DeleteWorkerPool {
+	wc, err := strconv.Atoi(config.Config().WorkersCount)
+	if err != nil {
+		wc = 10
+		logger.Errorf("error while reading config workers count: %f", err)
+	}
 	return DeleteWorkerPool{
-		workerCount: 10,
+		workerCount: wc,
 		uid:         uid,
 		links:       links,
 		errCh:       make(chan error),
