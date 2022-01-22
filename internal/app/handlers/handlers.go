@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/DrGermanius/Shortener/internal/app"
-	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/models"
 	"github.com/DrGermanius/Shortener/internal/store"
 )
@@ -26,12 +25,6 @@ func NewHandlers(store store.LinksStorager, logger *zap.SugaredLogger) Handlers 
 }
 
 func (h Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
-	_, err := checkAuthCookie(w, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	s := req.URL.Path[1:] // skip "/" from path; chi.UrlParam not working in tests
 
 	l, err := h.store.Get(req.Context(), s)
@@ -65,11 +58,7 @@ func (h Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) 
 }
 
 func (h Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
-	uid, err := checkAuthCookie(w, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	uid, _ := req.Context().Value("uid").(string)
 
 	res, err := h.store.GetByUserID(req.Context(), uid)
 	if err != nil {
@@ -97,11 +86,7 @@ func (h Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
-	uid, err := checkAuthCookie(w, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	uid, _ := req.Context().Value("uid").(string)
 
 	b, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
@@ -140,11 +125,7 @@ func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) 
 }
 
 func (h Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
-	uid, err := checkAuthCookie(w, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	uid, _ := req.Context().Value("uid").(string)
 
 	b, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
@@ -194,11 +175,7 @@ func (h Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
-	uid, err := checkAuthCookie(w, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	uid, _ := req.Context().Value("uid").(string)
 
 	b, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
@@ -245,11 +222,7 @@ func (h Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
-	uid, err := checkAuthCookie(w, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	uid, _ := req.Context().Value("uid").(string)
 
 	b, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
@@ -264,7 +237,9 @@ func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*20)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	time.AfterFunc(time.Second*20, cancel)
+
 	wp := app.NewDeleteWorkerPool(ctx, uid, links, h.store.Delete, h.logger)
 	go wp.Run()
 
@@ -275,28 +250,4 @@ func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-}
-
-func checkAuthCookie(w http.ResponseWriter, req *http.Request) (string, error) { //todo as middleware?
-	uid := ""
-	authCookie, err := req.Cookie(auth.AuthCookie)
-	if err != nil {
-		signaturedUUID, err := auth.GetSignature()
-		if err != nil {
-			return "", err
-		}
-
-		uid, err = auth.CheckSignature(signaturedUUID)
-		if err != nil {
-			return "", err
-		}
-		http.SetCookie(w, &http.Cookie{Name: auth.AuthCookie, Value: signaturedUUID})
-		return uid, nil
-	}
-
-	uid, err = auth.CheckSignature(authCookie.Value)
-	if err != nil {
-		return "", err
-	}
-	return uid, nil
 }
