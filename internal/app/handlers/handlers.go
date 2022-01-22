@@ -264,7 +264,8 @@ func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*20)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	time.AfterFunc(time.Second*20, cancel)
 	wp := app.NewDeleteWorkerPool(ctx, uid, links, h.store.Delete, h.logger)
 	go wp.Run()
 
