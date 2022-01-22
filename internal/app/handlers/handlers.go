@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -263,8 +264,7 @@ func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx := context.Background()
-
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*20)
 	wp := app.NewDeleteWorkerPool(ctx, uid, links, h.store.Delete, h.logger)
 	go wp.Run()
 

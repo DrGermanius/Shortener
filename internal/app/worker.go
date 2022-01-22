@@ -53,6 +53,11 @@ func (w DeleteWorkerPool) Run() {
 			{
 				return
 			}
+		case <-w.context.Done():
+			{
+				w.logger.Infof("context done")
+				return
+			}
 		}
 	}
 }
