@@ -20,11 +20,11 @@ type Handlers struct {
 	logger *zap.SugaredLogger
 }
 
-func NewHandlers(store store.LinksStorager, logger *zap.SugaredLogger) *Handlers {
-	return &Handlers{store: store, logger: logger}
+func NewHandlers(store store.LinksStorager, logger *zap.SugaredLogger) Handlers {
+	return Handlers{store: store, logger: logger}
 }
 
-func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	_, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,7 +52,7 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
 	if h.store.Ping(context.Background()) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte{})
@@ -63,7 +63,7 @@ func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request)
 	http.Error(w, "", http.StatusInternalServerError)
 }
 
-func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -95,7 +95,7 @@ func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -138,7 +138,7 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -192,7 +192,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -243,7 +243,7 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

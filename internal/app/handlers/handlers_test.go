@@ -419,7 +419,7 @@ func initTestData() {
 		logger.Fatalf("tests init error: %v", err)
 	}
 
-	H = *NewHandlers(linksMemoryStore, logger)
+	H = NewHandlers(linksMemoryStore, logger)
 
 	err = memory.Clear()
 	if err != nil {
