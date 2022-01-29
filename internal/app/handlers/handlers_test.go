@@ -419,7 +419,9 @@ func initTestData() {
 		logger.Fatalf("tests init error: %v", err)
 	}
 
-	H = NewHandlers(linksMemoryStore, logger)
+	ctx := context.Background()
+	wp := app.NewWorkerPool(ctx, logger)
+	H = NewHandlers(linksMemoryStore, wp, logger, ctx)
 
 	err = memory.Clear()
 	if err != nil {

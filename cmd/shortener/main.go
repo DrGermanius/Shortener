@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -30,7 +34,11 @@ func main() {
 		logger.Fatalf("can't initialize store: %v", err)
 	}
 
-	h := handlers.NewHandlers(storager, logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	wp := app.NewWorkerPool(ctx, logger)
+
+	h := handlers.NewHandlers(storager, wp, logger, ctx)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -52,5 +60,10 @@ func main() {
 	})
 
 	logger.Infof("API started on %s", c.ServerAddress)
-	logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
+	go logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down service...")
 }

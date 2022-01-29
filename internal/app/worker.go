@@ -3,92 +3,67 @@ package app
 import (
 	"context"
 	"strconv"
-	"sync"
 
 	"go.uber.org/zap"
 
 	"github.com/DrGermanius/Shortener/internal/app/config"
 )
 
-type DeleteWorkerPool struct {
-	workerCount int
-	uid         string
-	links       []string
-	errCh       chan error
-	context     context.Context
-	quit        chan struct{}
-	deleteFunc  func(context.Context, string, string) error
-	logger      *zap.SugaredLogger
+type WorkerPool struct {
+	context context.Context
+	inputCh chan input
+	logger  *zap.SugaredLogger
 }
 
-func NewDeleteWorkerPool(context context.Context, uid string, links []string, deleteFunc func(context.Context, string, string) error, logger *zap.SugaredLogger) DeleteWorkerPool {
+type input struct {
+	uid      string
+	link     string
+	context  context.Context
+	function func(context.Context, string, string) error
+}
+
+func NewWorkerPool(context context.Context, logger *zap.SugaredLogger) WorkerPool {
 	wc, err := strconv.Atoi(config.Config().WorkersCount)
 	if err != nil {
 		wc = 10
 		logger.Errorf("error while reading config workers count: %f", err)
 	}
-	return DeleteWorkerPool{
-		workerCount: wc,
-		uid:         uid,
-		links:       links,
-		errCh:       make(chan error),
-		context:     context,
-		quit:        make(chan struct{}),
-		deleteFunc:  deleteFunc,
-		logger:      logger,
+
+	wp := WorkerPool{
+		context: context,
+		inputCh: make(chan input, 10),
+		logger:  logger,
+	}
+
+	for i := 0; i < wc; i++ {
+		go wp.listen()
+	}
+	go wp.listen()
+	return wp
+}
+
+func (p WorkerPool) StartDeleteWorker(uid string, links []string, function func(context.Context, string, string) error, context context.Context) {
+	for _, link := range links {
+		i := input{
+			uid:      uid,
+			link:     link,
+			function: function,
+			context:  context,
+		}
+		p.inputCh <- i
 	}
 }
 
-func (w DeleteWorkerPool) Run() {
-	go w.do()
-
+func (p WorkerPool) listen() {
 	for {
 		select {
-		case <-w.errCh:
-			{
-				err := <-w.errCh
-				w.logger.Error(err)
+		case v := <-p.inputCh:
+			if err := v.function(v.context, v.uid, v.link); err != nil {
+				p.logger.Error(err)
 			}
-		case <-w.quit:
-			{
-				return
-			}
-		case <-w.context.Done():
-			{
-				w.logger.Infof("context done")
-				return
-			}
+		case <-p.context.Done():
+			p.logger.Infof("context done")
+			return
 		}
 	}
-}
-
-func (w DeleteWorkerPool) do() {
-	inCh := make(chan string, len(w.links))
-	go w.fanIn(inCh)
-
-	wg := sync.WaitGroup{}
-	wg.Add(w.workerCount)
-	for i := 0; i < w.workerCount; i++ {
-		go w.runWorker(&wg, inCh)
-	}
-	wg.Wait()
-
-	w.quit <- struct{}{}
-	close(w.errCh)
-}
-
-func (w DeleteWorkerPool) fanIn(inCh chan<- string) {
-	for _, v := range w.links {
-		inCh <- v
-	}
-	close(inCh)
-}
-
-func (w DeleteWorkerPool) runWorker(wg *sync.WaitGroup, linksCh <-chan string) {
-	for v := range linksCh {
-		if err := w.deleteFunc(w.context, w.uid, v); err != nil {
-			w.errCh <- err
-		}
-	}
-	wg.Done()
 }

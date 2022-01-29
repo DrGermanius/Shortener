@@ -17,12 +17,14 @@ import (
 )
 
 type Handlers struct {
-	store  store.LinksStorager
-	logger *zap.SugaredLogger
+	store      store.LinksStorager
+	workerPool app.WorkerPool
+	logger     *zap.SugaredLogger
+	context    context.Context
 }
 
-func NewHandlers(store store.LinksStorager, logger *zap.SugaredLogger) Handlers {
-	return Handlers{store: store, logger: logger}
+func NewHandlers(store store.LinksStorager, wp app.WorkerPool, logger *zap.SugaredLogger, context context.Context) Handlers {
+	return Handlers{store: store, workerPool: wp, logger: logger, context: context}
 }
 
 func (h Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
@@ -264,10 +266,9 @@ func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	ctx, cancel := context.WithTimeout(h.context, time.Second*20)
 	time.AfterFunc(time.Second*20, cancel)
-	wp := app.NewDeleteWorkerPool(ctx, uid, links, h.store.Delete, h.logger)
-	go wp.Run()
+	go h.workerPool.StartDeleteWorker(uid, links, h.store.Delete, ctx)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
