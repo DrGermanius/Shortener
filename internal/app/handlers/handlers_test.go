@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/DrGermanius/Shortener/internal/store/memory"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +22,6 @@ import (
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/config"
-	"github.com/DrGermanius/Shortener/internal/app/memory"
 	"github.com/DrGermanius/Shortener/internal/app/models"
 )
 
@@ -314,9 +317,9 @@ func TestButchLinks(t *testing.T) {
 
 			expectedRes := []models.BatchShort{
 				{CorrelationID: "1",
-					ShortURL: util.FullLink(app.ShortLink([]byte(gitLink)))},
+					ShortURL: app.FullLink(app.ShortLink([]byte(gitLink)))},
 				{CorrelationID: "2",
-					ShortURL: util.FullLink(app.ShortLink([]byte(yandexLink)))},
+					ShortURL: app.FullLink(app.ShortLink([]byte(yandexLink)))},
 			}
 
 			request := httptest.NewRequest(tt.method, "/user/urls", bytes.NewBuffer(req))
@@ -340,24 +343,94 @@ func TestButchLinks(t *testing.T) {
 	}
 }
 
+func TestDeleteLinks(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		link      string
+		shortLink string
+		want      want
+	}{
+		{
+			link:   yandexLink,
+			name:   "positive test #9",
+			method: http.MethodDelete,
+			want: want{
+				code: http.StatusAccepted,
+			},
+		},
+	}
+	for _, tt := range tests {
+		initTestData()
+		t.Run(tt.name, func(t *testing.T) {
+			authCookieValue, err := auth.GetSignature()
+			require.NoError(t, err)
+			authCookie := &http.Cookie{Name: auth.AuthCookie, Value: authCookieValue}
+
+			request := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.link))
+			request.AddCookie(authCookie)
+			w := httptest.NewRecorder()
+			h := http.HandlerFunc(H.AddShortLinkHandler)
+			h.ServeHTTP(w, request)
+
+			link := app.ShortLink([]byte(yandexLink))
+			req, err := json.Marshal([]string{
+				link,
+			})
+			require.NoError(t, err)
+
+			request = httptest.NewRequest(tt.method, "/api/user/urls", bytes.NewBuffer(req))
+			request.AddCookie(authCookie)
+
+			w = httptest.NewRecorder()
+			h = H.DeleteLinksHandler
+			h.ServeHTTP(w, request)
+
+			res := w.Result()
+			require.Equal(t, tt.want.code, res.StatusCode)
+			res.Body.Close()
+			time.Sleep(time.Second * 2)
+			request = httptest.NewRequest(http.MethodGet, "/"+link, nil)
+			request.AddCookie(authCookie)
+
+			w = httptest.NewRecorder()
+			h = H.GetShortLinkHandler
+			h.ServeHTTP(w, request)
+
+			res = w.Result()
+			defer res.Body.Close()
+			require.Equal(t, http.StatusGone, res.StatusCode)
+		})
+	}
+}
+
 func initTestData() {
 	config.SetTestConfig()
 
+	zapl, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	defer zapl.Sync()
+	logger := zapl.Sugar()
+
 	linksMemoryStore, err := memory.NewLinkMemoryStore()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalf("tests init error: %v", err)
 	}
 
-	H = *NewHandlers(linksMemoryStore)
+	ctx := context.Background()
+	wp := app.NewWorkerPool(ctx, logger)
+	H = NewHandlers(linksMemoryStore, wp, logger, ctx)
 
 	err = memory.Clear()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalf("tests init error: %v", err)
 	}
 
 	_, err = linksMemoryStore.Write(context.Background(), "", gitLink)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Fatalf("tests init error: %v", err)
 	}
 }
 

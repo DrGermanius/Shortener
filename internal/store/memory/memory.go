@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"github.com/DrGermanius/Shortener/internal/app/util"
 	"os"
 
 	"github.com/DrGermanius/Shortener/internal/app"
@@ -24,8 +23,7 @@ func NewLinkMemoryStore() (*LinkMemoryStore, error) {
 	return &LinksMap, nil
 }
 
-func (l *LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals []models.BatchOriginal) ([]string, error) {
-	_ = ctx
+func (l LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals []models.BatchOriginal) ([]string, error) {
 	shorts := make([]string, 0, len(originals))
 	for _, v := range originals {
 		s, err := l.Write(ctx, uid, v.OriginalURL)
@@ -38,26 +36,36 @@ func (l *LinkMemoryStore) BatchWrite(ctx context.Context, uid string, originals 
 	return shorts, nil
 }
 
-func (l *LinkMemoryStore) Ping(ctx context.Context) bool {
-	_ = ctx
-	return true //todo
+func (l LinkMemoryStore) Ping(_ context.Context) bool {
+	return true
 }
 
-func (l *LinkMemoryStore) Get(ctx context.Context, s string) (string, error) {
-	_ = ctx
-	long, exist := (*l)[s]
+func (l LinkMemoryStore) Delete(_ context.Context, uid string, link string) error {
+	if l[link].UUID == uid {
+		updatedLink := l[link]
+		updatedLink.IsDeleted = true
+		l[link] = updatedLink
+	}
+	return nil
+}
+
+func (l LinkMemoryStore) Get(_ context.Context, s string) (string, error) {
+	long, exist := l[s]
 	if !exist {
 		return "", app.ErrLinkNotFound
+	}
+
+	if long.IsDeleted {
+		return "", app.ErrDeletedLink
 	}
 	return long.Long, nil
 }
 
-func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) ([]models.LinkJSON, error) {
-	_ = ctx
+func (l LinkMemoryStore) GetByUserID(_ context.Context, id string) ([]models.LinkJSON, error) {
 	var res []models.LinkJSON
-	for k, v := range *l {
+	for k, v := range l {
 		if v.UUID == id {
-			res = append(res, models.LinkJSON{Long: v.Long, Short: util.FullLink(k)})
+			res = append(res, models.LinkJSON{Long: v.Long, Short: app.FullLink(k)})
 		}
 	}
 
@@ -68,10 +76,9 @@ func (l *LinkMemoryStore) GetByUserID(ctx context.Context, id string) ([]models.
 	return res, nil
 }
 
-func (l *LinkMemoryStore) Write(ctx context.Context, uuid, long string) (string, error) {
-	_ = ctx
+func (l LinkMemoryStore) Write(_ context.Context, uuid, long string) (string, error) {
 	s := app.ShortLink([]byte(long))
-	(*l)[s] = models.LinkInfo{Long: long, UUID: uuid}
+	l[s] = models.LinkInfo{Long: long, UUID: uuid, IsDeleted: false}
 
 	err := writeFile(uuid, s, long)
 	if err != nil {
@@ -81,7 +88,7 @@ func (l *LinkMemoryStore) Write(ctx context.Context, uuid, long string) (string,
 	return s, nil
 }
 
-func (l *LinkMemoryStore) readFile() error {
+func (l LinkMemoryStore) readFile() error {
 	p := config.Config().FilePath
 
 	f, err := os.OpenFile(p, os.O_RDONLY|os.O_CREATE, 0644)
@@ -98,7 +105,7 @@ func (l *LinkMemoryStore) readFile() error {
 			return err
 		}
 
-		(*l)[link.Short] = models.LinkInfo{Long: link.Long, UUID: link.UUID}
+		l[link.Short] = models.LinkInfo{Long: link.Long, UUID: link.UUID, IsDeleted: link.IsDeleted}
 	}
 	return nil
 }
@@ -114,9 +121,10 @@ func Clear() error {
 
 func writeFile(uuid, short, long string) error {
 	m := models.LinkJSON{
-		UUID:  uuid,
-		Short: short,
-		Long:  long,
+		UUID:      uuid,
+		Short:     short,
+		Long:      long,
+		IsDeleted: false,
 	}
 
 	p := config.Config().FilePath

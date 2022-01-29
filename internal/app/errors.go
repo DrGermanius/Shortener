@@ -9,4 +9,5 @@ var (
 	ErrEmptyBodyPostReq  = errors.New("body can't be empty")
 	ErrUserHasNoRecords  = errors.New("user has no records")
 	ErrInvalidSignature  = errors.New("invalid signature")
+	ErrDeletedLink       = errors.New("deleted link")
 )

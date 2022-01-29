@@ -4,14 +4,14 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"encoding/hex"
+
 	"github.com/DrGermanius/Shortener/internal/app"
+	"github.com/DrGermanius/Shortener/internal/app/config"
 
 	"github.com/google/uuid"
 )
 
 const AuthCookie = "UserID"
-
-var key = []byte("secret")
 
 func CheckSignature(s string) (string, error) {
 	if len(s) < 36 {
@@ -46,10 +46,11 @@ func GetSignature() (string, error) {
 }
 
 func calculateSignature(b []byte) ([]byte, error) {
+	key := []byte(config.Config().AuthKey)
 	h := hmac.New(md5.New, key)
 	_, err := h.Write(b)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	res := h.Sum(nil)

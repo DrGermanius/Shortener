@@ -4,32 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
+	"time"
+
+	"go.uber.org/zap"
+
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/auth"
 	"github.com/DrGermanius/Shortener/internal/app/models"
-	"github.com/DrGermanius/Shortener/internal/app/util"
-	"io/ioutil"
-	"log"
-	"net/http"
+	"github.com/DrGermanius/Shortener/internal/store"
 )
 
-type LinksStorager interface {
-	Get(context.Context, string) (string, error)
-	GetByUserID(context.Context, string) ([]models.LinkJSON, error)
-	Write(context.Context, string, string) (string, error)
-	BatchWrite(context.Context, string, []models.BatchOriginal) ([]string, error)
-	Ping(context.Context) bool
-}
-
 type Handlers struct {
-	store LinksStorager
+	store      store.LinksStorager
+	workerPool app.WorkerPool
+	logger     *zap.SugaredLogger
+	context    context.Context
 }
 
-func NewHandlers(store LinksStorager) *Handlers {
-	return &Handlers{store: store}
+func NewHandlers(store store.LinksStorager, wp app.WorkerPool, logger *zap.SugaredLogger, context context.Context) Handlers {
+	return Handlers{store: store, workerPool: wp, logger: logger, context: context}
 }
 
-func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	_, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -40,7 +38,12 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 
 	l, err := h.store.Get(req.Context(), s)
 	if err != nil {
+		if errors.Is(err, app.ErrDeletedLink) {
+			http.Error(w, err.Error(), http.StatusGone)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	w.Header().Add("Location", l)
@@ -48,11 +51,11 @@ func (h *Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request)
 
 	_, err = w.Write([]byte{})
 	if err != nil {
-		log.Print(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
 	if h.store.Ping(context.Background()) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte{})
@@ -63,7 +66,7 @@ func (h *Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request)
 	http.Error(w, "", http.StatusInternalServerError)
 }
 
-func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -95,7 +98,7 @@ func (h *Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -124,7 +127,7 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 			return
 		}
 	}
-	full := util.FullLink(s)
+	full := app.FullLink(s)
 
 	if linkAlreadyExist {
 		w.WriteHeader(http.StatusConflict)
@@ -138,7 +141,7 @@ func (h *Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -146,12 +149,11 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
 	if err != nil {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-
-	defer req.Body.Close()
 
 	sReq := models.ShortenRequest{}
 	sRes := models.ShortenResponse{}
@@ -173,7 +175,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	sRes.Result = util.FullLink(s)
+	sRes.Result = app.FullLink(s)
 	jRes, err := json.Marshal(sRes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -193,7 +195,7 @@ func (h *Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
+func (h Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -201,12 +203,11 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
 	if err != nil {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
 	}
-
-	defer req.Body.Close()
 
 	var batchReq []models.BatchOriginal
 
@@ -226,7 +227,7 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	for i := 0; i < len(batchReq); i++ {
 		batchRes = append(batchRes, models.BatchShort{
 			CorrelationID: batchReq[i].CorrelationID,
-			ShortURL:      util.FullLink(shorts[i]),
+			ShortURL:      app.FullLink(shorts[i]),
 		})
 	}
 
@@ -240,6 +241,39 @@ func (h *Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	_, err = w.Write(jRes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
+	uid, err := checkAuthCookie(w, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var links []string
+	err = json.Unmarshal(b, &links)
+	if err != nil {
+		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
+		return
+	}
+	ctx, cancel := context.WithTimeout(h.context, time.Second*20)
+	time.AfterFunc(time.Second*20, cancel)
+	go h.workerPool.StartDeleteWorker(uid, links, h.store.Delete, ctx)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+
+	_, err = w.Write([]byte{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
@@ -259,12 +293,12 @@ func checkAuthCookie(w http.ResponseWriter, req *http.Request) (string, error) {
 			return "", err
 		}
 		http.SetCookie(w, &http.Cookie{Name: auth.AuthCookie, Value: signaturedUUID})
+		return uid, nil
+	}
 
-	} else {
-		uid, err = auth.CheckSignature(authCookie.Value)
-		if err != nil {
-			return "", err
-		}
+	uid, err = auth.CheckSignature(authCookie.Value)
+	if err != nil {
+		return "", err
 	}
 	return uid, nil
 }
