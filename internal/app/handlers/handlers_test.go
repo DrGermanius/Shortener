@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,6 +31,7 @@ const (
 	yandexLink = "https://yandex.ru"
 )
 
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var H Handlers
 
 func TestPostHandler(t *testing.T) {
@@ -404,6 +406,33 @@ func TestDeleteLinks(t *testing.T) {
 	}
 }
 
+func BenchmarkAddGet(b *testing.B) {
+	initTestData()
+	authCookieValue, err := auth.GetSignature()
+	if err != nil {
+		b.Fatal(err)
+	}
+	authCookie := &http.Cookie{Name: auth.AuthCookie, Value: authCookieValue}
+	w := httptest.NewRecorder()
+	hAdd := http.HandlerFunc(H.AddShortLinkHandler)
+	hGet := http.HandlerFunc(H.GetShortLinkHandler)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		s := randStringRunes(10)
+		addRequest := httptest.NewRequest("POST", "/", strings.NewReader(s))
+		addRequest.AddCookie(authCookie)
+		getRequest := httptest.NewRequest("GET", "/", strings.NewReader(s))
+		getRequest.AddCookie(authCookie)
+		b.StartTimer()
+
+		hAdd.ServeHTTP(w, addRequest)
+		hGet.ServeHTTP(w, getRequest)
+	}
+}
+
 func initTestData() {
 	config.SetTestConfig()
 
@@ -432,6 +461,14 @@ func initTestData() {
 	if err != nil {
 		logger.Fatalf("tests init error: %v", err)
 	}
+}
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
 
 type want struct {

@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -105,13 +107,15 @@ func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	b, err := ioutil.ReadAll(req.Body)
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, req.Body)
 	defer req.Body.Close()
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	b := buf.Bytes()
 	if len(b) == 0 {
 		http.Error(w, app.ErrEmptyBodyPostReq.Error(), http.StatusBadRequest)
 		return
