@@ -46,7 +46,7 @@ func main() {
 	r.Use(ml.GzipDecompress)
 
 	r.Get("/{id}", h.GetShortLinkHandler)
-	r.Get("/user/urls", h.GetUserUrlsHandler)
+	r.Get("/api/user/urls", h.GetUserUrlsHandler)
 	r.Get("/ping", h.PingDatabaseHandler)
 
 	r.Post("/", h.AddShortLinkHandler)
