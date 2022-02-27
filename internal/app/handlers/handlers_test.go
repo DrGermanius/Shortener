@@ -422,15 +422,86 @@ func BenchmarkAddGet(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		s := randStringRunes(10)
-		addRequest := httptest.NewRequest("POST", "/", strings.NewReader(s))
+		addRequest := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(s))
 		addRequest.AddCookie(authCookie)
-		getRequest := httptest.NewRequest("GET", "/", strings.NewReader(s))
+		getRequest := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(s))
 		getRequest.AddCookie(authCookie)
 		b.StartTimer()
 
 		hAdd.ServeHTTP(w, addRequest)
 		hGet.ServeHTTP(w, getRequest)
 	}
+}
+
+func ExampleHandlers_AddShortLinkHandler() {
+	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(yandexLink))
+	w := httptest.NewRecorder()
+	h := http.HandlerFunc(H.AddShortLinkHandler)
+	h.ServeHTTP(w, request)
+}
+
+func ExampleHandlers_GetShortLinkHandler() {
+	request := httptest.NewRequest(http.MethodGet, "/"+yandexLink, nil)
+	w := httptest.NewRecorder()
+	h := http.HandlerFunc(H.GetShortLinkHandler)
+	h.ServeHTTP(w, request)
+}
+
+func ExampleHandlers_DeleteLinksHandler() {
+	link := app.ShortLink([]byte(yandexLink))
+	req, err := json.Marshal([]string{
+		link,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	authCookie := &http.Cookie{Name: auth.AuthCookie, Value: "authCookieValue"}
+
+	request := httptest.NewRequest(http.MethodDelete, "/api/user/urls", bytes.NewBuffer(req))
+	request.AddCookie(authCookie)
+	w := httptest.NewRecorder()
+	h := http.HandlerFunc(H.DeleteLinksHandler)
+	h.ServeHTTP(w, request)
+}
+
+func ExampleHandlers_ShortenHandler() {
+	sReq := models.ShortenRequest{URL: yandexLink}
+	body, err := json.Marshal(sReq)
+	request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewBuffer(body))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	h := http.HandlerFunc(H.ShortenHandler)
+	h.ServeHTTP(w, request)
+}
+
+func ExampleHandlers_GetUserUrlsHandler() {
+	request := httptest.NewRequest(http.MethodGet, "/user/urls", nil)
+	authCookie := &http.Cookie{Name: auth.AuthCookie, Value: "authCookieValue"}
+	request.AddCookie(authCookie)
+
+	w := httptest.NewRecorder()
+	h := http.HandlerFunc(H.GetUserUrlsHandler)
+	h.ServeHTTP(w, request)
+}
+
+func ExampleHandlers_BatchHandler() {
+	req, err := json.Marshal([]models.BatchOriginal{
+		{CorrelationID: "1",
+			OriginalURL: gitLink},
+		{CorrelationID: "2",
+			OriginalURL: yandexLink},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "/user/urls", bytes.NewBuffer(req))
+	w := httptest.NewRecorder()
+	h := http.HandlerFunc(H.BatchHandler)
+	h.ServeHTTP(w, request)
 }
 
 func initTestData() {
