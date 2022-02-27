@@ -1,3 +1,5 @@
+// Copyright (c) 2021 Herman Samolazov <samolazov.herman@gmail.com>. All rights reserved.
+
 // Package handlers stores Shortener api handlers.
 package handlers
 
