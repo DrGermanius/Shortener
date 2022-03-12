@@ -1,3 +1,6 @@
+// COPYRIGHT (c) 2021 Herman Samolazov <samolazov.herman@gmail.com>. All rights reserved.
+
+// Package handlers stores Shortener api handlers.
 package handlers
 
 import (
@@ -27,6 +30,7 @@ func NewHandlers(store store.LinksStorager, wp app.WorkerPool, logger *zap.Sugar
 	return Handlers{store: store, workerPool: wp, logger: logger, context: context}
 }
 
+// GetShortLinkHandler redirects client to full url address by short representation.
 func (h Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	_, err := checkAuthCookie(w, req)
 	if err != nil {
@@ -55,6 +59,7 @@ func (h Handlers) GetShortLinkHandler(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
+// PingDatabaseHandler checks if links storage is available.
 func (h Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) {
 	if h.store.Ping(context.Background()) {
 		w.WriteHeader(http.StatusOK)
@@ -66,6 +71,7 @@ func (h Handlers) PingDatabaseHandler(w http.ResponseWriter, req *http.Request) 
 	http.Error(w, "", http.StatusInternalServerError)
 }
 
+// GetUserUrlsHandler returns user's loaded links by userID.
 func (h Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
@@ -98,6 +104,7 @@ func (h Handlers) GetUserUrlsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// AddShortLinkHandler creates and return short representation of URL address and saves it.
 func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
@@ -141,6 +148,7 @@ func (h Handlers) AddShortLinkHandler(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
+// ShortenHandler creates and returns short representation of URL address and saves it via JSON.
 func (h Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
@@ -195,6 +203,7 @@ func (h Handlers) ShortenHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// BatchHandler takes a couple of URL addresses via JSON, creates and returns short representation of that and saves it.
 func (h Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
@@ -246,6 +255,7 @@ func (h Handlers) BatchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// DeleteLinksHandler takes a couple of user's URL addresses via JSON and deletes from store.
 func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 	uid, err := checkAuthCookie(w, req)
 	if err != nil {
@@ -279,7 +289,8 @@ func (h Handlers) DeleteLinksHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func checkAuthCookie(w http.ResponseWriter, req *http.Request) (string, error) { //todo as middleware?
+// checkAuthCookie sets or validates user cookie and authenticates user.
+func checkAuthCookie(w http.ResponseWriter, req *http.Request) (string, error) {
 	uid := ""
 	authCookie, err := req.Cookie(auth.AuthCookie)
 	if err != nil {
