@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +20,17 @@ import (
 	"github.com/DrGermanius/Shortener/internal/store"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	fmt.Printf("Build version: %v\n", buildVersion)
+	fmt.Printf("Build date: %v\n", buildDate)
+	fmt.Printf("Build commit: %v\n", buildCommit)
+
 	var err error
 	c := config.NewConfig()
 	zapl, err := zap.NewProduction()
@@ -33,7 +44,6 @@ func main() {
 	if err != nil {
 		logger.Fatalf("can't initialize store: %v", err)
 	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	wp := app.NewWorkerPool(ctx, logger)
@@ -44,6 +54,8 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Compress(5))
 	r.Use(ml.GzipDecompress)
+
+	r.Mount("/debug", middleware.Profiler())
 
 	r.Get("/{id}", h.GetShortLinkHandler)
 	r.Get("/api/user/urls", h.GetUserUrlsHandler)
