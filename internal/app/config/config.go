@@ -37,6 +37,7 @@ type config struct {
 	ConnectionString string
 	AuthKey          string
 	WorkersCount     string
+	IsHTTPS          bool
 }
 
 func NewConfig() *config {
@@ -53,7 +54,7 @@ func NewConfig() *config {
 	flag.StringVar(&c.FilePath, "f", setEnvOrDefault(filePathEnv, defaultFilePath), "filePath for links")
 	flag.StringVar(&c.ConnectionString, "d", setEnvOrDefault(dbConnectionString, defaultConn), "postgres connection path")
 	flag.Parse()
-
+	c.IsHTTPS = isFlagPassed("s")
 	return c
 }
 
@@ -77,4 +78,14 @@ func setEnvOrDefault(env, def string) string {
 		res = def
 	}
 	return res
+}
+
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
 }

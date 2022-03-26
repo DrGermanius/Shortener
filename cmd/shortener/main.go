@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/DrGermanius/Shortener/internal/app"
 	"github.com/DrGermanius/Shortener/internal/app/config"
@@ -72,7 +73,21 @@ func main() {
 	})
 
 	logger.Infof("API started on %s", c.ServerAddress)
-	go logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
+
+	if config.Config().IsHTTPS {
+		manager := &autocert.Manager{
+			Cache:  autocert.DirCache("cache-dir"),
+			Prompt: autocert.AcceptTOS,
+		}
+		server := &http.Server{
+			Addr:      c.ServerAddress,
+			Handler:   r,
+			TLSConfig: manager.TLSConfig(),
+		}
+		go logger.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		go logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
