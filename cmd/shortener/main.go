@@ -33,7 +33,10 @@ func main() {
 	fmt.Printf("Build commit: %v\n", buildCommit)
 
 	var err error
-	c := config.NewConfig()
+	c, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("can't initialize config: %v", err)
+	}
 	zapl, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("can't initialize zap logger: %v", err)
