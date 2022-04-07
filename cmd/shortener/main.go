@@ -87,13 +87,17 @@ func main() {
 			Handler:   r,
 			TLSConfig: manager.TLSConfig(),
 		}
-		go logger.Fatal(server.ListenAndServeTLS("", ""))
+		go func() {
+			logger.Fatal(server.ListenAndServeTLS("", ""))
+		}()
 	} else {
-		go logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
+		go func() {
+			logger.Fatal(http.ListenAndServe(c.ServerAddress, r))
+		}()
 	}
 
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-quit
 	log.Println("Shutting down service...")
 }
